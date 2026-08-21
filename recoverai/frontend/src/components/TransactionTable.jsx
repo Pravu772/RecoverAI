@@ -1,10 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   IconSearch, IconFilter, IconChevronUp, IconChevronDown,
   IconChevronRight, actionIcon, reasonIcon, IconCopy, IconCheck,
   IconZap, IconShoppingCart, IconRepeat, IconFileText, IconCalendar,
   IconBrain, IconLayers, IconUser
 } from './Icons.jsx';
+import { formatCurrency } from '../utils/currency.js';
 
 const STATUS_META = {
   failed:              { label: 'Failed',            cls: 'bg-rose-50 text-rose-700 border-rose-200' },
@@ -94,7 +95,7 @@ const SortIcon = ({ field, active, dir }) => {
     : <IconChevronDown className="w-3 h-3 inline ml-0.5 text-indigo-600" />;
 };
 
-const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream }) => {
+const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream, currency = 'INR' }) => {
   const [sortField, setSortField] = useState('created_at');
   const [sortDir,   setSortDir]   = useState('desc');
   const [fStatus,   setFStatus]   = useState('');
@@ -103,6 +104,7 @@ const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream 
   const [copiedId,  setCopiedId]  = useState(null);
   const [density,   setDensity]   = useState('comfortable'); // 'comfortable' | 'dense'
   const [selectedIds, setSelectedIds] = useState([]);
+  const [focusedIndex, setFocusedIndex] = useState(0);
 
   const handleCopy = (e, id) => {
     e.stopPropagation();
@@ -147,6 +149,30 @@ const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream 
         return 0;
       });
   }, [transactions, selectedStream, fStatus, fReason, search, sortField, sortDir]);
+
+  // Keyboard navigation (j/k or Arrow keys, Space/Enter to inspect)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      // Don't intercept if user is typing in an input
+      if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
+
+      if (e.key === 'j' || e.key === 'ArrowDown') {
+        e.preventDefault();
+        setFocusedIndex(prev => Math.min(prev + 1, rows.length - 1));
+      } else if (e.key === 'k' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        setFocusedIndex(prev => Math.max(prev - 1, 0));
+      } else if (e.key === 'Enter' || e.key === ' ') {
+        if (rows[focusedIndex]) {
+          e.preventDefault();
+          onRowClick(rows[focusedIndex]);
+        }
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [rows, focusedIndex, onRowClick]);
 
   // Bulk selection handlers
   const handleToggleSelectAll = () => {
@@ -434,7 +460,7 @@ const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream 
                   {/* At Risk Amount */}
                   <td>
                     <span className="font-bold font-mono text-xs text-slate-900 tabular-nums">
-                      {formatINR(txn.amount)}
+                      {formatCurrency(txn.amount, currency)}
                     </span>
                   </td>
 

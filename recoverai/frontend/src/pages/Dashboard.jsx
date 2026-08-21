@@ -45,6 +45,7 @@ const Dashboard = () => {
   const [selectedStream,   setSelectedStream]   = useState('all');
   const [lastRefreshed,    setLastRefreshed]    = useState(null);
   const [toasts,           setToasts]           = useState([]);
+  const [currency,         setCurrency]         = useState('INR');
 
   // Modals state
   const [complianceOpen,   setComplianceOpen]   = useState(false);
@@ -191,11 +192,18 @@ const Dashboard = () => {
               <kbd className="font-mono bg-slate-100 px-1 py-0.2 rounded border border-slate-200 text-slate-400">⌘K</kbd>
             </button>
 
-            {lastRefreshed && (
-              <span className="text-2xs text-slate-400 font-medium hidden xl:inline-block">
-                {lastRefreshed.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
-              </span>
-            )}
+            {/* Currency Switcher */}
+            <select
+              value={currency}
+              onChange={e => setCurrency(e.target.value)}
+              className="px-2 py-1 bg-slate-100 hover:bg-slate-200/70 border border-slate-200 rounded-lg text-2xs font-mono font-bold text-slate-700 outline-none cursor-pointer"
+              title="Switch Display Currency"
+            >
+              <option value="INR">INR (₹)</option>
+              <option value="USD">USD ($)</option>
+              <option value="EUR">EUR (€)</option>
+              <option value="GBP">GBP (£)</option>
+            </select>
 
             <button
               id="btn-refresh"
@@ -289,6 +297,7 @@ const Dashboard = () => {
               selectedStream={selectedStream}
               onRowClick={setSelectedTxn}
               isLoading={loadingTxns}
+              currency={currency}
             />
           )}
           {activeTab === 'exceptions' && (
