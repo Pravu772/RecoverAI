@@ -32,10 +32,10 @@ const ExceptionsPanel = ({ transactions, onRowClick }) => {
     return (
       <div className="card p-10 flex flex-col items-center gap-3 text-center">
         <div
-          className="w-10 h-10 rounded-full flex items-center justify-center"
-          style={{ background: '#ecfdf5' }}
+          className="w-11 h-11 rounded-xl p-2 flex items-center justify-center"
+          style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
         >
-          <IconShield className="w-5 h-5" style={{ color: '#059669' }} />
+          <img src="/logo-icon.png" alt="RecoverAI" className="w-full h-full object-contain" />
         </div>
         <div>
           <p className="font-semibold text-sm mb-1" style={{ color: 'var(--color-text-primary)' }}>

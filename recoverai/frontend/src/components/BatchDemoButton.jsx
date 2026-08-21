@@ -117,13 +117,16 @@ const BatchDemoButton = ({ onComplete, count = 50 }) => {
     <div className="card p-5 flex flex-col gap-4">
       {/* Title */}
       <div className="flex items-center justify-between gap-4">
-        <div>
-          <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-            Demo Controls
-          </h3>
-          <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-            Full pipeline run in approximately 30 seconds
-          </p>
+        <div className="flex items-center gap-2.5">
+          <img src="/logo-icon.png" alt="RecoverAI" className="w-6 h-6 object-contain rounded-md" />
+          <div>
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
+              Autonomous Recovery Engine
+            </h3>
+            <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
+              3-stage bounded pipeline execution
+            </p>
+          </div>
         </div>
       </div>
 

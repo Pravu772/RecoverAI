@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./frontend/public/logo-brand.png" alt="RecoverAI Logo" width="340"/>
+</p>
+
 # RecoverAI — AI-Powered Payment Failure Recovery System
 
 > **Fintech Hackathon** | Razorpay-style Revenue Recovery Track  

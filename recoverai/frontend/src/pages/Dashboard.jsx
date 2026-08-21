@@ -63,18 +63,14 @@ const Dashboard = () => {
         <div className="max-w-[1440px] mx-auto px-6 h-14 flex items-center justify-between gap-6">
 
           {/* Brand */}
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <div
-              className="w-7 h-7 rounded-lg flex items-center justify-center"
-              style={{ background: 'var(--color-accent)', color: '#fff' }}
-            >
-              <IconActivity className="w-3.5 h-3.5" strokeWidth={2} />
-            </div>
-            <span className="font-semibold text-sm tracking-tight" style={{ color: 'var(--color-text-primary)' }}>
-              RecoverAI
-            </span>
+          <div className="flex items-center gap-3 flex-shrink-0 cursor-pointer" onClick={() => setActiveTab('transactions')}>
+            <img
+              src="/logo-brand.png"
+              alt="RecoverAI"
+              className="h-7 w-auto object-contain"
+            />
             <span
-              className="text-2xs font-medium px-2 py-0.5 rounded-full hidden sm:inline-flex"
+              className="text-2xs font-medium px-2 py-0.5 rounded-full hidden md:inline-flex"
               style={{ background: 'var(--color-accent-light)', color: 'var(--color-accent)' }}
             >
               Revenue Recovery
@@ -176,6 +172,25 @@ const Dashboard = () => {
             <BreakdownChart breakdown={summary?.breakdown_by_reason} />
           )}
         </div>
+
+        {/* ── Footer ─────────────────────────────────────────────────────────── */}
+        <footer
+          className="mt-12 py-6 border-t flex flex-col sm:flex-row items-center justify-between gap-3 text-xs"
+          style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-muted)' }}
+        >
+          <div className="flex items-center gap-2">
+            <img src="/logo-icon.png" alt="RecoverAI" className="w-4 h-4 object-contain" />
+            <span className="font-medium" style={{ color: 'var(--color-text-secondary)' }}>RecoverAI</span>
+            <span>— Autonomous AI Payment Failure Recovery System</span>
+          </div>
+          <div className="flex items-center gap-3 text-2xs">
+            <span>Bounded Execution</span>
+            <span>•</span>
+            <span>Auditable Decision Trail</span>
+            <span>•</span>
+            <span>Gemini AI Driven</span>
+          </div>
+        </footer>
       </main>
 
       {/* ── Audit drawer ────────────────────────────────────────────────────── */}

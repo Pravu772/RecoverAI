@@ -66,13 +66,16 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
             borderBottom: '1px solid var(--color-border)',
           }}
         >
-          <div className="min-w-0">
-            <p className="text-xs font-medium mb-0.5" style={{ color: 'var(--color-text-muted)' }}>
-              Audit Trail
-            </p>
-            <p className="font-mono text-xs truncate" style={{ color: 'var(--color-accent)' }}>
-              {transaction.transaction_id}
-            </p>
+          <div className="flex items-center gap-3 min-w-0">
+            <img src="/logo-icon.png" alt="RecoverAI" className="w-7 h-7 object-contain rounded-md" />
+            <div className="min-w-0">
+              <p className="text-xs font-medium mb-0.5" style={{ color: 'var(--color-text-muted)' }}>
+                Immutable Audit Trail
+              </p>
+              <p className="font-mono text-xs truncate" style={{ color: 'var(--color-accent)' }}>
+                {transaction.transaction_id}
+              </p>
+            </div>
           </div>
           <button
             id="close-audit-drawer"
