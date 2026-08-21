@@ -27,7 +27,26 @@ const useCountUp = (target, duration = 900) => {
   return value;
 };
 
-const MetricCard = ({ label, value, sub, Icon, accentColor, isCurrency, isPercent, isLoading }) => {
+const Sparkline = ({ color = '#059669', isPositive = true }) => {
+  const points = isPositive
+    ? "0,14 6,12 12,13 18,9 24,11 30,6 36,8 42,2"
+    : "0,4 6,7 12,5 18,10 24,8 30,12 36,11 42,15";
+
+  return (
+    <svg className="w-11 h-4 overflow-visible" viewBox="0 0 42 16" fill="none">
+      <polyline
+        points={points}
+        fill="none"
+        stroke={color}
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+};
+
+const MetricCard = ({ label, value, sub, Icon, accentColor, isCurrency, isPercent, isLoading, isPositive = true }) => {
   const { formatMoney } = useCurrency();
   const num = typeof value === 'number' ? value : 0;
   const counted = useCountUp(num);
@@ -38,27 +57,34 @@ const MetricCard = ({ label, value, sub, Icon, accentColor, isCurrency, isPercen
     : counted.toLocaleString('en-IN');
 
   return (
-    <div className="metric-card flex flex-col gap-3">
-      <div className="flex items-start justify-between gap-4">
+    <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all flex flex-col justify-between gap-3 group">
+      <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <p className="stat-label">{label}</p>
+          <p className="text-2xs font-bold uppercase tracking-wider text-slate-500">{label}</p>
           {isLoading ? (
-            <div className="skeleton h-8 w-28 mt-1" />
+            <div className="skeleton h-7 w-24 mt-1.5" />
           ) : (
-            <p className="stat-value animate-count">{display}</p>
+            <p className="text-xl font-bold font-mono tracking-tight text-slate-900 mt-1 tabular-nums animate-count">
+              {display}
+            </p>
           )}
         </div>
         <div
-          className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0"
-          style={{ background: accentColor + '12', color: accentColor }}
+          className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105"
+          style={{ background: accentColor + '14', color: accentColor }}
         >
           <Icon className="w-4 h-4" />
         </div>
       </div>
-      {sub && !isLoading && (
-        <p className="text-xs" style={{ color: 'var(--color-text-muted)' }}>{sub}</p>
-      )}
-      {isLoading && <div className="skeleton h-3 w-20" />}
+      
+      <div className="flex items-center justify-between pt-2 border-t border-slate-100/80">
+        {sub && !isLoading ? (
+          <p className="text-2xs text-slate-500 font-medium truncate">{sub}</p>
+        ) : (
+          <div className="skeleton h-2.5 w-16" />
+        )}
+        {!isLoading && <Sparkline color={accentColor} isPositive={isPositive} />}
+      </div>
     </div>
   );
 };

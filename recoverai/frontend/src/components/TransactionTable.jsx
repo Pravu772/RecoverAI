@@ -382,7 +382,7 @@ const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream 
                     : 'No records matching the active filter criteria.'}
                 </td>
               </tr>
-            ) : rows.map(txn => {
+            ) : rows.map((txn, idx) => {
               const sm = STATUS_META[txn.status] || { label: txn.status, cls: 'bg-slate-100 text-slate-600 border-slate-200' };
               const st = STREAM_META[txn.revenue_stream] || STREAM_META.payment_gateway;
               const StreamIcon = st.Icon;
@@ -390,14 +390,15 @@ const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream 
               const ReasonIcon = reasonIcon(txn.classified_reason);
               const reasonColor = REASON_COLORS[txn.classified_reason] || '#64748b';
               const isSelected = selectedIds.includes(txn.transaction_id);
+              const isFocused = idx === focusedIndex;
 
               return (
                 <tr
                   key={txn.transaction_id || txn._id}
-                  onClick={() => onRowClick(txn)}
-                  className={`hover:bg-slate-50/80 transition-colors cursor-pointer group ${
-                    isSelected ? 'bg-indigo-50/30' : ''
-                  } ${density === 'dense' ? '!py-1.5' : ''}`}
+                  onClick={() => { setFocusedIndex(idx); onRowClick(txn); }}
+                  className={`hover:bg-slate-50 transition-colors cursor-pointer group ${
+                    isFocused ? 'table-row-focus bg-slate-50/90' : ''
+                  } ${isSelected ? 'bg-indigo-50/40' : ''} ${density === 'dense' ? '!py-1.5' : ''}`}
                 >
                   {/* Select Checkbox */}
                   <td onClick={e => handleToggleRowSelect(e, txn.transaction_id)}>

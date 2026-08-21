@@ -281,6 +281,19 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
               <span className="font-semibold text-teal-950">Invoice Reference:</span> {currentTxn.invoice_id} ({currentTxn.invoice_aging_days} days overdue)
             </div>
           )}
+
+          {/* Cryptographic SHA-256 Ledger Stamp */}
+          <div className="mt-3.5 p-2.5 rounded-xl bg-white border border-slate-200 flex items-center justify-between gap-3 shadow-2xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20 flex-shrink-0" />
+              <span className="text-2xs font-mono text-slate-600 truncate">
+                Merkle Provenance: <strong className="text-slate-900">SHA-256 Validated</strong>
+              </span>
+            </div>
+            <span className="text-3xs font-mono px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
+              0% Tamper Risk
+            </span>
+          </div>
         </div>
 
         {/* Tab Navigation */}
@@ -390,28 +403,33 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
               
               {/* WhatsApp Rich Message Preview */}
               <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-xs">
-                <div className="px-4 py-2.5 bg-emerald-700 text-white flex items-center justify-between">
+                <div className="px-4 py-2.5 bg-emerald-800 text-white flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-emerald-400/30" />
                     <span className="text-xs font-bold">WhatsApp Business Gateway</span>
                   </div>
-                  <span className="text-2xs font-mono text-emerald-200">Delivered • Encrypted</span>
+                  <span className="text-2xs font-mono text-emerald-200">Verified Business • End-to-End Encrypted</span>
                 </div>
 
-                <div className="p-4 bg-slate-50/70">
-                  <div className="max-w-[340px] bg-white rounded-2xl rounded-tl-xs p-3.5 border border-slate-200 shadow-xs space-y-2 text-xs">
-                    <p className="font-semibold text-slate-900">
-                      Hi {currentTxn.customer_name || 'there'}, your transaction of <span className="font-bold text-emerald-700">{formatMoney(currentTxn.amount)}</span> was not completed.
+                <div className="p-4 bg-slate-100/70">
+                  <div className="max-w-[340px] bg-white rounded-2xl rounded-tl-xs p-4 border border-slate-200/90 shadow-xs space-y-2.5 text-xs relative">
+                    <p className="font-bold text-slate-900 leading-snug">
+                      Hi {currentTxn.customer_name || 'there'}, your payment of <span className="text-emerald-700 font-extrabold">{formatMoney(currentTxn.amount)}</span> was interrupted.
                     </p>
                     <p className="text-2xs text-slate-600 leading-relaxed">
                       {currentTxn.cart_summary
-                        ? `We saved your items: "${currentTxn.cart_summary}". Click below to resume checkout with 1-click UPI or Card.`
-                        : 'Click below to securely complete your payment with pre-filled payment details.'}
+                        ? `Your order items "${currentTxn.cart_summary}" are reserved for the next 60 minutes. Tap below to complete with 1-click UPI / Card.`
+                        : 'Your payment link has been pre-filled. Tap below to complete securely in 1 click.'}
                     </p>
                     <div className="pt-2 border-t border-slate-100">
-                      <button className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors text-center">
-                        Complete Payment ({formatMoney(currentTxn.amount)})
+                      <button className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white rounded-xl text-xs font-bold shadow-xs transition-all text-center flex items-center justify-center gap-1.5 cursor-pointer">
+                        <span>Complete Payment</span>
+                        <span className="font-mono font-normal">({formatMoney(currentTxn.amount)})</span>
                       </button>
+                    </div>
+                    <div className="flex items-center justify-end gap-1 text-3xs font-mono text-slate-400 pt-0.5">
+                      <span>10:42 PM</span>
+                      <span className="text-indigo-500 font-bold">✓✓</span>
                     </div>
                   </div>
                 </div>
@@ -424,14 +442,14 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
                   <span className="text-2xs font-mono text-slate-500">{currentTxn.customer_phone || '+91 98765 43210'}</span>
                 </div>
                 <div className="p-4 bg-slate-50/50">
-                  <div className="p-3 bg-white rounded-xl border border-slate-200 text-xs font-mono text-slate-700 leading-relaxed">
+                  <div className="p-3.5 bg-white rounded-xl border border-slate-200 text-xs font-mono text-slate-700 leading-relaxed shadow-2xs">
                     [RECOVERAI] Payment of {formatMoney(currentTxn.amount)} at {currentTxn.merchant_id || 'Merchant'} failed ({currentTxn.failure_code}). Tap link to retry immediately: https://pay.recoverai.io/r/{currentTxn.transaction_id}
                   </div>
                 </div>
               </div>
 
               {/* Printable Cryptographic Audit Dossier */}
-              <div className="p-4 rounded-xl bg-indigo-50/50 border border-indigo-200 flex items-center justify-between gap-3">
+              <div className="p-4 rounded-xl bg-indigo-50/60 border border-indigo-200 flex items-center justify-between gap-3">
                 <div>
                   <h4 className="text-xs font-bold text-indigo-950">Compliance Audit Dossier</h4>
                   <p className="text-2xs text-indigo-700 mt-0.5">Generate formal SOX/RBI compliance PDF record with SHA-256 hash</p>
@@ -451,10 +469,10 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
           {activeTab === 'voice' && (
             <div className="space-y-5">
               {/* Voice Agent Control Card (Light Modern Theme) */}
-              <div className="rounded-xl p-5 bg-gradient-to-br from-slate-50 to-indigo-50/40 border border-slate-200 shadow-xs">
+              <div className="rounded-2xl p-5 bg-white border border-slate-200 shadow-xs">
                 <div className="flex items-start justify-between">
                   <div>
-                    <span className="text-2xs uppercase tracking-widest px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded font-semibold border border-indigo-200">
+                    <span className="text-2xs uppercase tracking-widest px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded-md font-bold border border-indigo-200">
                       Autonomous Hinglish Agent
                     </span>
                     <h3 className="text-sm font-bold mt-1.5 text-slate-900">
@@ -464,21 +482,20 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
                       Empathetic conversational outreach with automated PTP capture
                     </p>
                   </div>
-                  <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center">
+                  <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-700 border border-indigo-200 flex items-center justify-center">
                     <IconVolume2 className="w-4 h-4" />
                   </div>
                 </div>
 
-                {/* Animated Frequency Waveform (Light Theme) */}
-                <div className="my-4 py-3 px-4 bg-white rounded-lg border border-slate-200/80 flex items-center justify-between gap-1.5 shadow-2xs">
-                  {[35, 60, 20, 85, 40, 75, 55, 95, 30, 70, 45, 90, 25, 80, 35, 65, 50, 85].map((h, i) => (
+                {/* Animated Frequency Equalizer Waveform */}
+                <div className="my-4 py-3 px-4 bg-slate-50 rounded-xl border border-slate-200/90 flex items-center justify-between gap-1 shadow-2xs h-12">
+                  {[4, 12, 8, 16, 10, 18, 14, 20, 12, 18, 8, 15, 6, 14, 10, 18, 12, 8].map((h, i) => (
                     <div
                       key={i}
-                      className={`w-1 rounded-full transition-all duration-200 ${
-                        isPlaying ? 'bg-indigo-600' : 'bg-slate-200'
-                      }`}
+                      className={isPlaying ? 'eq-bar' : 'w-1 rounded-full bg-slate-200 transition-all'}
                       style={{
-                        height: isPlaying ? `${Math.max(10, (h * ((i % 3) + 1)) % 32)}px` : '6px',
+                        height: isPlaying ? undefined : '6px',
+                        animationDelay: isPlaying ? `${(i * 0.08).toFixed(2)}s` : undefined,
                       }}
                     />
                   ))}

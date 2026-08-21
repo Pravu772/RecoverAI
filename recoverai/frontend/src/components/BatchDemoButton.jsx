@@ -194,24 +194,28 @@ const BatchDemoButton = ({ onComplete, count = 50 }) => {
           id="btn-run-demo"
           onClick={runDemo}
           disabled={running}
-          className="btn-primary flex-1 justify-center text-xs"
+          className={`flex-1 justify-center text-xs py-2.5 px-4 rounded-xl font-bold transition-all shadow-xs flex items-center gap-2 cursor-pointer ${
+            running
+              ? 'shimmer-wave text-white'
+              : 'bg-indigo-600 hover:bg-indigo-700 active:translate-y-0.5 text-white'
+          }`}
         >
           {running ? (
-            <><div className="spinner" /><span>Executing Pipeline…</span></>
+            <><div className="spinner text-white" /><span>Executing AI Recovery Pipeline…</span></>
           ) : (
-            <><IconPlay className="w-3.5 h-3.5" /><span>Run Full Recovery Cycle</span></>
+            <><IconPlay className="w-3.5 h-3.5 text-white" /><span>Run Full Recovery Cycle</span></>
           )}
         </button>
         <button
           id="btn-advance-time"
           onClick={handleAdvanceTime}
           disabled={running || advancingTime}
-          className="btn-secondary text-xs"
+          className="px-3.5 py-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer"
           title="Advance simulated clock by 2 days to test cooldown & evaluate PTP deadlines"
         >
           {advancingTime
             ? <div className="spinner" />
-            : <IconFastForward className="w-3.5 h-3.5" />
+            : <IconFastForward className="w-3.5 h-3.5 text-indigo-600" />
           }
           <span className="hidden sm:inline">+48h Clock</span>
         </button>

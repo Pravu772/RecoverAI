@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getTransactions, getDashboardSummary, generateBatch, classifyBatch, recoverBatch, advanceTime } from '../api/index.js';
+import Sidebar                from '../components/Sidebar.jsx';
 import SummaryCards           from '../components/SummaryCards.jsx';
 import TransactionTable       from '../components/TransactionTable.jsx';
 import AuditTrailDrawer       from '../components/AuditTrailDrawer.jsx';
@@ -23,21 +24,6 @@ import {
 } from '../components/Icons.jsx';
 
 import { useCurrency } from '../context/CurrencyContext.jsx';
-
-const TABS = [
-  { id: 'transactions', label: 'Transactions Ledger', Icon: IconList },
-  { id: 'exceptions',   label: 'Exception Queue',     Icon: IconAlertTriangle },
-  { id: 'analytics',    label: 'Revenue Analytics',   Icon: IconBarChart2 },
-];
-
-const STREAM_FILTERS = [
-  { id: 'all',                  label: 'All Streams',          Icon: IconLayers },
-  { id: 'payment_gateway',      label: 'Gateway Failures',     Icon: IconZap },
-  { id: 'checkout_abandonment', label: 'Checkout Drop-offs',   Icon: IconShoppingCart },
-  { id: 'subscription_renewal', label: 'Subscription Mandates', Icon: IconRepeat },
-  { id: 'b2b_invoice',          label: 'B2B Receivables',      Icon: IconFileText },
-  { id: 'ptp',                  label: 'PTP Commitments',      Icon: IconCalendar },
-];
 
 const Dashboard = () => {
   const { currency, setCurrency } = useCurrency();
@@ -65,62 +51,75 @@ const Dashboard = () => {
   const [flowOpen,         setFlowOpen]         = useState(false);
 
   const addToast = (title, message, type = 'info') => {
-    const id = Date.now();
+    const id = Date.now() + Math.random();
     setToasts(prev => [...prev, { id, title, message, type }]);
-    setTimeout(() => {
-      setToasts(prev => prev.filter(t => t.id !== id));
-    }, 4000);
   };
 
-  // Real-Time Server-Sent Events (SSE) Listener
+  const removeToast = (id) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  };
+
+  // SSE Stream Listener for real-time live events
   useEffect(() => {
-    let eventSource;
-    try {
-      eventSource = new EventSource('http://localhost:5000/api/stream/events');
-      eventSource.addEventListener('audit_event', (e) => {
-        try {
-          const entry = JSON.parse(e.data);
-          if (entry.action_type === 'outcome' && entry.outcome === 'success') {
-            addToast('Real-Time Recovery Succeeded', `Transaction ${entry.transaction_id.substring(0, 10)}… recovered: ₹${entry.amount || 0}`, 'success');
-          }
-        } catch (err) {}
-      });
-      eventSource.addEventListener('chaos_state_changed', (e) => {
-        try {
-          const chaos = JSON.parse(e.data);
-          addToast('Chaos State Mutation', chaos.message, chaos.is_active ? 'warning' : 'info');
-        } catch (err) {}
-      });
-    } catch (err) {
-      console.log('SSE Stream connection error:', err);
-    }
+    const eventSource = new EventSource('/api/stream/events');
+
+    eventSource.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.type === 'audit_event') {
+          addToast(
+            `Recovery Action: ${payload.action || 'Dispatched'}`,
+            `Txn ${payload.transaction_id ? payload.transaction_id.substring(0, 10) : ''}… updated to ${payload.status}`,
+            payload.status === 'recovered' ? 'success' : 'info'
+          );
+          // Non-blocking refresh
+          getDashboardSummary().then(s => setSummary(s)).catch(() => {});
+        }
+      } catch (err) {
+        console.error('SSE Message parsing error:', err);
+      }
+    };
+
     return () => {
-      if (eventSource) eventSource.close();
+      eventSource.close();
     };
   }, []);
 
-  const refresh = useCallback(async () => {
+  const fetchTransactions = useCallback(async () => {
     setLoadingTxns(true);
-    setLoadingSummary(true);
     try {
-      const [txnData, summaryData] = await Promise.all([
-        getTransactions({ limit: 200 }),
-        getDashboardSummary(),
-      ]);
-      setTransactions(txnData.transactions || []);
-      setSummary(summaryData);
+      const data = await getTransactions(selectedStream);
+      setTransactions(Array.isArray(data) ? data : data?.transactions || []);
       setLastRefreshed(new Date());
-    } catch (err) {
-      console.error('Refresh failed:', err.message);
+    } catch (e) {
+      console.error('Failed to fetch transactions:', e);
     } finally {
       setLoadingTxns(false);
+    }
+  }, [selectedStream]);
+
+  const fetchSummary = useCallback(async () => {
+    setLoadingSummary(true);
+    try {
+      const data = await getDashboardSummary();
+      setSummary(data);
+    } catch (e) {
+      console.error('Failed to fetch summary:', e);
+    } finally {
       setLoadingSummary(false);
     }
   }, []);
 
-  useEffect(() => { refresh(); }, [refresh]);
+  const refresh = useCallback(() => {
+    fetchTransactions();
+    fetchSummary();
+  }, [fetchTransactions, fetchSummary]);
 
-  const handleRunBatchFromPalette = async () => {
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  const handleRunBatch = async () => {
     try {
       await generateBatch(50);
       await classifyBatch();
@@ -131,7 +130,7 @@ const Dashboard = () => {
     }
   };
 
-  const handleAdvanceTimeFromPalette = async () => {
+  const handleAdvanceTime = async () => {
     try {
       await advanceTime(2);
       refresh();
@@ -144,113 +143,69 @@ const Dashboard = () => {
     ['exception', 'max_retries_reached', 'pending_human', 'opted_out', 'ptp_broken'].includes(t.status)
   ).length;
 
+  const streamCounts = {
+    all:                  transactions.length,
+    payment_gateway:      transactions.filter(t => t.revenue_stream === 'payment_gateway').length,
+    checkout_abandonment: transactions.filter(t => t.revenue_stream === 'checkout_abandonment').length,
+    subscription_renewal: transactions.filter(t => t.revenue_stream === 'subscription_renewal').length,
+    b2b_invoice:          transactions.filter(t => t.revenue_stream === 'b2b_invoice').length,
+    ptp:                  transactions.filter(t => ['committed', 'kept', 'broken'].includes(t.ptp_status)).length,
+  };
+
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased selection:bg-indigo-100 selection:text-indigo-900">
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased flex selection:bg-indigo-100 selection:text-indigo-900">
 
-      {/* ── Top Navigation Bar ─────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-xs">
-        <div className="max-w-[1440px] mx-auto px-6 h-15 flex items-center justify-between gap-6">
+      {/* ── Left Sidebar Navigation ────────────────────────────────────────── */}
+      <Sidebar
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        selectedStream={selectedStream}
+        setSelectedStream={setSelectedStream}
+        transactionsCount={transactions.length}
+        exceptionsCount={exceptionCount}
+        streamCounts={streamCounts}
+        currentTenant={currentTenant}
+        currentRole={currentRole}
+        onOpenRBAC={() => setRbacOpen(true)}
+        onOpenFlow={() => setFlowOpen(true)}
+        onOpenInjection={() => setInjectionOpen(true)}
+        onOpenCFO={() => setCfoOpen(true)}
+        onOpenPolicy={() => setPolicyOpen(true)}
+        onOpenCompliance={() => setComplianceOpen(true)}
+      />
 
-          {/* Brand & Product Identifier */}
-          <div className="flex items-center gap-3.5 flex-shrink-0">
-            <div
-              className="cursor-pointer"
-              onClick={() => { setSelectedStream('all'); setActiveTab('transactions'); }}
-            >
-              <img
-                src="/logo-brand.png"
-                alt="RecoverAI"
-                className="h-7 w-auto object-contain"
-              />
-            </div>
-            <div className="h-4 w-px bg-slate-200 hidden sm:block" />
-            
-            {/* Workspace & Persona Switcher Pill */}
-            <button
-              onClick={() => setRbacOpen(true)}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-2xs font-semibold text-slate-700 transition-colors cursor-pointer"
-              title="Switch Organization Workspace & RBAC Role"
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span className="font-bold text-slate-900">{currentTenant.name.split(' ')[0]}</span>
-              <span className="text-slate-400 font-mono">({currentRole.id.toUpperCase()})</span>
-            </button>
+      {/* ── Main Workspace Area ────────────────────────────────────────────── */}
+      <div className="flex-1 min-w-0 flex flex-col min-h-screen">
+        
+        {/* Streamlined Top Utility Header */}
+        <header className="sticky top-0 z-30 glass-nav border-b border-slate-200/80 shadow-2xs h-16 px-8 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <h1 className="text-sm font-bold text-slate-900">
+              {activeTab === 'transactions' ? 'Transactions & Recovery Ledger'
+               : activeTab === 'exceptions' ? 'Exception Resolution Queue'
+               : 'Revenue Recovery Analytics & Trends'}
+            </h1>
+            <span className="text-3xs font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
+              {currentTenant.name}
+            </span>
           </div>
 
-          {/* Primary View Tabs */}
-          <nav className="flex items-center p-1 bg-slate-100/80 rounded-lg border border-slate-200/60">
-            {TABS.map(tab => {
-              const { Icon } = tab;
-              const isActive = activeTab === tab.id;
-              const count = tab.id === 'transactions' ? transactions.length
-                          : tab.id === 'exceptions' ? exceptionCount
-                          : null;
-              return (
-                <button
-                  key={tab.id}
-                  id={`tab-${tab.id}`}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 ${
-                    isActive
-                      ? 'bg-white text-indigo-700 shadow-xs'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
-                  }`}
-                >
-                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-indigo-600' : 'text-slate-400'}`} />
-                  <span>{tab.label}</span>
-                  {count !== null && count > 0 && (
-                    <span
-                      className={`text-2xs font-mono px-1.5 py-0.2 rounded-full tabular-nums ${
-                        isActive
-                          ? 'bg-indigo-50 text-indigo-700 font-bold border border-indigo-200'
-                          : 'bg-slate-200 text-slate-600'
-                      }`}
-                    >
-                      {count}
-                    </span>
-                  )}
-                </button>
-              );
-            })}
-          </nav>
-
-          {/* Controls & Environment Status */}
-          <div className="flex items-center gap-3 flex-shrink-0">
-            {/* Visual Logic Flow Graph Button */}
-            <button
-              onClick={() => setFlowOpen(true)}
-              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-2xs font-semibold transition-all shadow-2xs"
-              title="View Decision Routing Flow Tree"
-            >
-              <IconLayers className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Decision Flow</span>
-            </button>
-
-            {/* Simulate Custom Failure Button */}
-            <button
-              onClick={() => setInjectionOpen(true)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100/70 border border-indigo-200 text-indigo-700 text-2xs font-bold transition-all shadow-2xs"
-              title="Inject a custom failure scenario live"
-            >
-              <IconZap className="w-3.5 h-3.5 text-indigo-600" />
-              <span>Simulate Gateway Drop</span>
-            </button>
-
-            {/* Spotlight Search Shortcut Button */}
+          <div className="flex items-center gap-3">
+            {/* Spotlight Search */}
             <button
               onClick={() => setPaletteOpen(true)}
-              className="hidden lg:flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-50 text-2xs transition-colors"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-50 text-2xs transition-all shadow-2xs cursor-pointer"
             >
               <IconSearch className="w-3.5 h-3.5 text-slate-400" />
               <span>Search Actions…</span>
               <kbd className="font-mono bg-slate-100 px-1 py-0.2 rounded border border-slate-200 text-slate-400">⌘K</kbd>
             </button>
 
-            {/* Currency Switcher */}
+            {/* Currency Selector */}
             <select
               value={currency}
               onChange={e => setCurrency(e.target.value)}
-              className="px-2 py-1 bg-slate-100 hover:bg-slate-200/70 border border-slate-200 rounded-lg text-2xs font-mono font-bold text-slate-700 outline-none cursor-pointer"
+              className="px-2.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 rounded-xl text-2xs font-mono font-bold text-slate-700 outline-none cursor-pointer shadow-2xs"
               title="Switch Display Currency"
             >
               <option value="INR">INR (₹)</option>
@@ -263,123 +218,87 @@ const Dashboard = () => {
               id="btn-refresh"
               onClick={refresh}
               disabled={loadingTxns}
-              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+              className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-2xs cursor-pointer"
               title="Refresh ledger state"
             >
               <IconRefreshCw className={`w-4 h-4 ${loadingTxns ? 'animate-spin' : ''}`} />
             </button>
 
             {/* Live Operational Pipeline Indicator */}
-            <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800">
+            <div className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl bg-emerald-50/80 border border-emerald-200 text-emerald-800 shadow-2xs">
               <span className="relative flex h-2 w-2">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 ring-2 ring-emerald-500/20" />
               </span>
-              <span className="text-2xs font-bold tracking-tight">Active Engine</span>
+              <span className="text-2xs font-bold tracking-tight">Engine Active</span>
             </div>
           </div>
-        </div>
-      </header>
+        </header>
 
-      {/* ── Main Dashboard Content ─────────────────────────────────────────── */}
-      <main className="max-w-[1440px] mx-auto px-6 py-6">
+        {/* Dashboard Main Content */}
+        <main className="p-8 max-w-[1600px] w-full mx-auto space-y-6">
 
-        {/* Priority 4: Executive ROI & Unit Economics Banner */}
-        <ExecutiveROIBanner
-          summary={summary}
-          onOpenCompliance={() => setComplianceOpen(true)}
-          onOpenCFO={() => setCfoOpen(true)}
-          onOpenPolicy={() => setPolicyOpen(true)}
-        />
+          {/* Priority 4: Executive ROI & Unit Economics Banner */}
+          <ExecutiveROIBanner
+            summary={summary}
+            onOpenCompliance={() => setComplianceOpen(true)}
+            onOpenCFO={() => setCfoOpen(true)}
+            onOpenPolicy={() => setPolicyOpen(true)}
+          />
 
-        {/* Executive Overview Grid */}
-        <div className="grid grid-cols-1 xl:grid-cols-[330px,1fr] gap-4 mb-6">
-          <BatchDemoButton onComplete={refresh} count={50} />
-          <SummaryCards summary={summary} isLoading={loadingSummary} />
-        </div>
-
-        {/* Priority 1: Real-Time Live Activity Feed & Pipeline Stream */}
-        <LiveActivityFeed
-          transactions={transactions}
-          onSelectTxn={setSelectedTxn}
-        />
-
-        {/* ── Risk Category & Ledger Filter Bar ───────────────────────────────── */}
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4 bg-white p-2 rounded-xl border border-slate-200 shadow-xs">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-2xs font-bold uppercase tracking-wider text-slate-400 px-2 py-1">
-              Risk Streams
-            </span>
-
-            {STREAM_FILTERS.map(st => {
-              const { Icon } = st;
-              const isSel = selectedStream === st.id;
-              const count = st.id === 'all'
-                ? transactions.length
-                : st.id === 'ptp'
-                ? transactions.filter(t => ['committed', 'kept', 'broken'].includes(t.ptp_status)).length
-                : transactions.filter(t => t.revenue_stream === st.id).length;
-
-              return (
-                <button
-                  key={st.id}
-                  onClick={() => { setSelectedStream(st.id); setActiveTab('transactions'); }}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 ${
-                    isSel
-                      ? 'bg-slate-900 text-white shadow-xs'
-                      : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/80'
-                  }`}
-                >
-                  <Icon className={`w-3.5 h-3.5 ${isSel ? 'text-white' : 'text-slate-400'}`} />
-                  <span>{st.label}</span>
-                  <span className={`text-2xs px-1.5 py-0.2 rounded-full font-mono font-medium ${
-                    isSel ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
-                  }`}>
-                    {count}
-                  </span>
-                </button>
-              );
-            })}
+          {/* Executive Overview Grid */}
+          <div className="grid grid-cols-1 xl:grid-cols-[330px,1fr] gap-4">
+            <BatchDemoButton onComplete={refresh} count={50} />
+            <SummaryCards summary={summary} isLoading={loadingSummary} />
           </div>
-        </div>
 
-        {/* Dynamic Views */}
-        <div className="animate-fade">
-          {activeTab === 'transactions' && (
-            <TransactionTable
-              transactions={transactions}
-              selectedStream={selectedStream}
-              onRowClick={setSelectedTxn}
-              isLoading={loadingTxns}
-              currency={currency}
-            />
-          )}
-          {activeTab === 'exceptions' && (
-            <ExceptionsPanel
-              transactions={transactions}
-              onRowClick={setSelectedTxn}
-            />
-          )}
-          {activeTab === 'analytics' && (
-            <BreakdownChart breakdown={summary?.breakdown_by_reason} />
-          )}
-        </div>
+          {/* Real-Time Live Activity Feed */}
+          <LiveActivityFeed
+            transactions={transactions}
+            onSelectTxn={setSelectedTxn}
+          />
 
-        {/* ── Enterprise Footer ──────────────────────────────────────────────── */}
-        <footer className="mt-12 py-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
-          <div className="flex items-center gap-2">
-            <span className="font-semibold text-slate-700">RecoverAI Platform</span>
-            <span>— Autonomous Revenue Recovery & Bounded Intervention Architecture</span>
+          {/* Dynamic Views */}
+          <div className="animate-fade">
+            {activeTab === 'transactions' && (
+              <TransactionTable
+                transactions={transactions}
+                selectedStream={selectedStream}
+                onRowClick={setSelectedTxn}
+                isLoading={loadingTxns}
+              />
+            )}
+            {activeTab === 'exceptions' && (
+              <ExceptionsPanel
+                transactions={transactions}
+                onRowClick={setSelectedTxn}
+                onResolved={refresh}
+              />
+            )}
+            {activeTab === 'analytics' && (
+              <BreakdownChart
+                transactions={transactions}
+                summary={summary}
+              />
+            )}
           </div>
-          <div className="flex items-center gap-3 text-2xs text-slate-400 font-mono">
-            <span>Deterministic Routing</span>
-            <span>•</span>
-            <span>Gemini Reasoning</span>
-            <span>•</span>
-            <span>Immutable Audit Provenance</span>
-          </div>
-        </footer>
-      </main>
+
+          {/* ── Enterprise Footer ──────────────────────────────────────────────── */}
+          <footer className="mt-12 py-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+            <div className="flex items-center gap-2">
+              <span className="font-semibold text-slate-700">RecoverAI Platform</span>
+              <span>— Autonomous Revenue Recovery & Bounded Intervention Architecture</span>
+            </div>
+            <div className="flex items-center gap-3 text-2xs text-slate-400 font-mono">
+              <span>Deterministic Routing</span>
+              <span>•</span>
+              <span>Gemini Reasoning</span>
+              <span>•</span>
+              <span>Immutable Audit Provenance</span>
+            </div>
+          </footer>
+        </main>
+      </div>
 
       {/* ── Audit & Diagnostic Drawer ──────────────────────────────────────── */}
       {selectedTxn && (
@@ -400,8 +319,8 @@ const Dashboard = () => {
         isOpen={paletteOpen}
         onClose={setPaletteOpen}
         onSelectStream={setSelectedStream}
-        onRunBatch={handleRunBatchFromPalette}
-        onAdvanceTime={handleAdvanceTimeFromPalette}
+        onRunBatch={handleRunBatch}
+        onAdvanceTime={handleAdvanceTime}
         onOpenCompliance={() => setComplianceOpen(true)}
       />
 
@@ -457,12 +376,10 @@ const Dashboard = () => {
       {/* ── Toast Notifications Stack ──────────────────────────────────────── */}
       <ToastContainer
         toasts={toasts}
-        onDismiss={(id) => setToasts(prev => prev.filter(t => t.id !== id))}
+        onDismiss={removeToast}
       />
     </div>
   );
 };
 
 export default Dashboard;
-
-
