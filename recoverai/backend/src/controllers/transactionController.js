@@ -1,15 +1,17 @@
 const Transaction = require('../models/Transaction');
 const { generateTransactions } = require('../utils/syntheticDataGenerator');
 const { classifyTransaction } = require('../services/classificationService');
+const { generateVoiceScript } = require('../services/recoveryService');
+const auditService = require('../services/auditService');
 
 /**
  * Transaction Controller
- * Handles: generate, list, and single-transaction classification
+ * Handles: generate, list, single/batch classification, voice script generation, and PTP lifecycle
  */
 
 /**
  * POST /api/transactions/generate
- * Generates a batch of synthetic failed transactions and saves to DB.
+ * Generates a batch of synthetic multi-stream revenue-at-risk items.
  */
 const generateBatch = async (req, res) => {
   const count = parseInt(req.body.count || req.query.count || 50, 10);
@@ -25,7 +27,7 @@ const generateBatch = async (req, res) => {
   const transactions = await Transaction.insertMany(transactionData);
 
   res.status(201).json({
-    message: `Generated ${transactions.length} synthetic failed transactions`,
+    message: `Generated ${transactions.length} synthetic revenue-at-risk items across 4 streams`,
     count: transactions.length,
     transactions: transactions.map(summarize),
   });
@@ -33,7 +35,6 @@ const generateBatch = async (req, res) => {
 
 /**
  * POST /api/transactions/:id/classify
- * Classifies a single transaction (rule-based or AI).
  */
 const classifyOne = async (req, res) => {
   const transaction = await Transaction.findOne({ transaction_id: req.params.id });
@@ -48,13 +49,11 @@ const classifyOne = async (req, res) => {
     });
   }
 
-  // Mark as classifying
   transaction.status = 'classifying';
   await transaction.save();
 
   const result = await classifyTransaction(transaction);
 
-  // Update transaction with classification results
   transaction.classified_reason = result.classified_reason;
   transaction.confidence_score = result.confidence_score;
   transaction.ai_reasoning = result.reasoning;
@@ -63,13 +62,15 @@ const classifyOne = async (req, res) => {
     transaction.status = 'exception';
     transaction.exception_reason = result.exception_reason;
   } else {
-    transaction.status = 'action_taken'; // Ready for recovery
+    transaction.status = 'action_taken';
   }
 
   await transaction.save();
 
   res.json({
     transaction_id: transaction.transaction_id,
+    revenue_stream: transaction.revenue_stream,
+    customer_name: transaction.customer_name,
     classified_reason: transaction.classified_reason,
     confidence_score: transaction.confidence_score,
     status: transaction.status,
@@ -81,7 +82,6 @@ const classifyOne = async (req, res) => {
 
 /**
  * POST /api/transactions/classify-batch
- * Classifies all "failed" transactions.
  */
 const classifyBatch = async (req, res) => {
   const failedTransactions = await Transaction.find({ status: 'failed' });
@@ -111,7 +111,13 @@ const classifyBatch = async (req, res) => {
       }
 
       await txn.save();
-      results.push({ transaction_id: txn.transaction_id, status: txn.status, classified_reason: txn.classified_reason, used_ai: result.used_ai });
+      results.push({
+        transaction_id: txn.transaction_id,
+        revenue_stream: txn.revenue_stream,
+        status: txn.status,
+        classified_reason: txn.classified_reason,
+        used_ai: result.used_ai
+      });
     } catch (err) {
       txn.status = 'exception';
       txn.exception_reason = `Unexpected error during classification: ${err.message}`;
@@ -131,15 +137,137 @@ const classifyBatch = async (req, res) => {
 };
 
 /**
+ * POST /api/transactions/:id/voice-script
+ * Generates or retrieves Hinglish Voice AI recovery script for a transaction
+ */
+const getOrGenerateVoiceScript = async (req, res) => {
+  const transaction = await Transaction.findOne({ transaction_id: req.params.id });
+
+  if (!transaction) {
+    return res.status(404).json({ error: `Transaction ${req.params.id} not found` });
+  }
+
+  if (!transaction.voice_script) {
+    const script = await generateVoiceScript(transaction);
+    transaction.voice_script = script;
+    await transaction.save();
+
+    await auditService.log({
+      transaction_id: transaction.transaction_id,
+      action_type: 'recovery_action',
+      detected_reason: transaction.classified_reason,
+      confidence_score: transaction.confidence_score,
+      action_taken: 'hinglish_voice_script_generated',
+      reasoning: `Generated AI Hinglish voice conversation script for customer ${transaction.customer_name} (₹${transaction.amount}).`,
+      outcome: 'success',
+      amount: transaction.amount,
+      meta: { script_summary: script.summary, turns: script.turns.length },
+    });
+  }
+
+  res.json({
+    transaction_id: transaction.transaction_id,
+    customer_name: transaction.customer_name,
+    customer_phone: transaction.customer_phone,
+    amount: transaction.amount,
+    voice_script: transaction.voice_script,
+  });
+};
+
+/**
+ * POST /api/transactions/:id/ptp
+ * Sets a Promise-to-Pay (PTP) commitment
+ */
+const setPromiseToPay = async (req, res) => {
+  const { ptp_date, ptp_amount, ptp_notes } = req.body;
+  const transaction = await Transaction.findOne({ transaction_id: req.params.id });
+
+  if (!transaction) {
+    return res.status(404).json({ error: `Transaction ${req.params.id} not found` });
+  }
+
+  transaction.ptp_status = 'committed';
+  transaction.ptp_date = ptp_date ? new Date(ptp_date) : new Date(Date.now() + 2 * 24 * 60 * 60 * 1000);
+  transaction.ptp_amount = ptp_amount || transaction.amount;
+  transaction.ptp_notes = ptp_notes || 'Customer agreed to pay on committed date via phone call';
+  transaction.status = 'ptp_committed';
+
+  await transaction.save();
+
+  await auditService.log({
+    transaction_id: transaction.transaction_id,
+    action_type: 'recovery_action',
+    detected_reason: transaction.classified_reason,
+    confidence_score: transaction.confidence_score,
+    action_taken: 'ptp_commitment_logged',
+    reasoning: `🤝 Customer ${transaction.customer_name} promised to pay ₹${transaction.ptp_amount} by ${transaction.ptp_date.toISOString()}. Automated reminders scheduled.`,
+    outcome: 'pending',
+    amount: transaction.amount,
+    meta: { ptp_date: transaction.ptp_date, notes: transaction.ptp_notes },
+  });
+
+  res.json({
+    message: 'Promise-to-Pay (PTP) committed successfully',
+    transaction,
+  });
+};
+
+/**
+ * POST /api/transactions/:id/ptp-status
+ * Updates PTP status (e.g. mark kept or broken)
+ */
+const updatePTPStatus = async (req, res) => {
+  const { status } = req.body; // 'kept', 'broken'
+  const transaction = await Transaction.findOne({ transaction_id: req.params.id });
+
+  if (!transaction) {
+    return res.status(404).json({ error: `Transaction ${req.params.id} not found` });
+  }
+
+  transaction.ptp_status = status;
+  if (status === 'kept') {
+    transaction.status = 'recovered';
+    await auditService.log({
+      transaction_id: transaction.transaction_id,
+      action_type: 'outcome',
+      detected_reason: transaction.classified_reason,
+      confidence_score: transaction.confidence_score,
+      action_taken: 'ptp_fulfilled',
+      reasoning: `✅ Promise-to-Pay KEPT: Customer ${transaction.customer_name} paid ₹${transaction.amount} on time.`,
+      outcome: 'success',
+      amount: transaction.amount,
+    });
+  } else if (status === 'broken') {
+    transaction.status = 'ptp_broken';
+    await auditService.log({
+      transaction_id: transaction.transaction_id,
+      action_type: 'exception',
+      detected_reason: transaction.classified_reason,
+      confidence_score: transaction.confidence_score,
+      action_taken: 'ptp_broken_escalate',
+      reasoning: `⚠️ Promise-to-Pay BROKEN: Customer ${transaction.customer_name} missed deadline ${transaction.ptp_date}. Escalating to human collections.`,
+      outcome: 'failure',
+      amount: transaction.amount,
+    });
+  }
+
+  await transaction.save();
+
+  res.json({ message: `PTP status updated to ${status}`, transaction });
+};
+
+/**
  * GET /api/transactions
- * Lists all transactions with optional filters.
+ * Lists all transactions with stream and status filters.
  */
 const listTransactions = async (req, res) => {
-  const { status, reason, page = 1, limit = 100 } = req.query;
+  const { status, reason, stream, ptp_status, page = 1, limit = 100 } = req.query;
   const filter = {};
 
   if (status) filter.status = status;
   if (reason) filter.classified_reason = reason;
+  if (stream && stream !== 'all') filter.revenue_stream = stream;
+  if (ptp_status) filter.ptp_status = ptp_status;
 
   const transactions = await Transaction.find(filter)
     .sort({ created_at: -1 })
@@ -156,16 +284,26 @@ const listTransactions = async (req, res) => {
   });
 };
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
 const summarize = (txn) => ({
   transaction_id: txn.transaction_id,
+  revenue_stream: txn.revenue_stream,
   merchant_id: txn.merchant_id,
+  customer_name: txn.customer_name,
   amount: txn.amount,
   failure_code: txn.failure_code,
   status: txn.status,
+  ptp_status: txn.ptp_status,
   opted_out: txn.opted_out,
   created_at: txn.created_at,
 });
 
-module.exports = { generateBatch, classifyOne, classifyBatch, listTransactions };
+module.exports = {
+  generateBatch,
+  classifyOne,
+  classifyBatch,
+  getOrGenerateVoiceScript,
+  setPromiseToPay,
+  updatePTPStatus,
+  listTransactions
+};
+

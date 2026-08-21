@@ -26,7 +26,48 @@ const transactionSchema = new mongoose.Schema(
       required: true,
     },
 
-    // Raw error code from the payment gateway (may be vague/unknown)
+    // Revenue stream category
+    revenue_stream: {
+      type: String,
+      enum: [
+        'payment_gateway',
+        'checkout_abandonment',
+        'subscription_renewal',
+        'b2b_invoice',
+      ],
+      default: 'payment_gateway',
+      index: true,
+    },
+
+    customer_name: {
+      type: String,
+      default: 'Customer',
+    },
+
+    customer_phone: {
+      type: String,
+      default: null,
+    },
+
+    // Metadata for specific streams
+    cart_summary: {
+      type: String,
+      default: null,
+    },
+    invoice_id: {
+      type: String,
+      default: null,
+    },
+    invoice_aging_days: {
+      type: Number,
+      default: null,
+    },
+    subscription_tier: {
+      type: String,
+      default: null,
+    },
+
+    // Raw error code from the payment gateway / drop reason
     failure_code: {
       type: String,
       required: true,
@@ -41,6 +82,11 @@ const transactionSchema = new mongoose.Schema(
         'bank_timeout',
         'mandate_expired',
         'network_error',
+        'checkout_hesitation',
+        'otp_dropoff',
+        'invoice_overdue_30d',
+        'invoice_overdue_60d',
+        'subscription_failed_billing',
         'unknown',
         null,
       ],
@@ -59,14 +105,16 @@ const transactionSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: [
-        'failed',            // Initial state — awaiting classification
-        'classifying',       // Classification in progress
-        'action_taken',      // Recovery action dispatched
-        'recovered',         // Payment successfully recovered
-        'exception',         // Low confidence or unhandled — needs human review
+        'failed',              // Initial state — awaiting classification
+        'classifying',         // Classification in progress
+        'action_taken',        // Recovery action dispatched
+        'recovered',           // Payment successfully recovered
+        'exception',           // Low confidence or unhandled — needs human review
         'max_retries_reached', // Hit 3-attempt limit — no further action
-        'pending_human',     // Escalated to human agent
-        'opted_out',         // Customer opted out of recovery
+        'pending_human',       // Escalated to human agent
+        'opted_out',           // Customer opted out of recovery
+        'ptp_committed',       // Customer promised to pay by specified date
+        'ptp_broken',          // Promised date passed without payment
       ],
       default: 'failed',
     },
@@ -77,12 +125,42 @@ const transactionSchema = new mongoose.Schema(
       enum: [
         'immediate_retry',
         'scheduled_retry_2days',
+        'smart_payday_retry',
         'sms_nudge',
         'email_alt_payment',
+        'whatsapp_checkout_link',
+        'b2b_dunning_escalation',
+        'hinglish_voice_call',
         'escalate_human',
         'none',
         null,
       ],
+      default: null,
+    },
+
+    // Promise-to-Pay (PTP) Tracking
+    ptp_status: {
+      type: String,
+      enum: ['none', 'committed', 'kept', 'broken'],
+      default: 'none',
+      index: true,
+    },
+    ptp_date: {
+      type: Date,
+      default: null,
+    },
+    ptp_amount: {
+      type: Number,
+      default: null,
+    },
+    ptp_notes: {
+      type: String,
+      default: null,
+    },
+
+    // Voice AI Script & Call details
+    voice_script: {
+      type: mongoose.Schema.Types.Mixed,
       default: null,
     },
 

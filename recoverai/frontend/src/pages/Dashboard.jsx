@@ -21,6 +21,7 @@ const Dashboard = () => {
   const [loadingTxns,      setLoadingTxns]      = useState(false);
   const [loadingSummary,   setLoadingSummary]   = useState(false);
   const [activeTab,        setActiveTab]        = useState('transactions');
+  const [selectedStream,   setSelectedStream]   = useState('all');
   const [lastRefreshed,    setLastRefreshed]    = useState(null);
 
   const refresh = useCallback(async () => {
@@ -153,11 +154,49 @@ const Dashboard = () => {
           <SummaryCards summary={summary} isLoading={loadingSummary} />
         </div>
 
+        {/* ── Revenue Stream Filter Bar ────────────────────────────────────────── */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4 bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-2xs font-bold uppercase tracking-wider text-slate-400 mr-2 ml-1">
+              Risk Streams:
+            </span>
+            {[
+              { id: 'all',                  label: '🌐 All Streams',       count: transactions.length },
+              { id: 'payment_gateway',      label: '⚡ Gateway Failures',  count: transactions.filter(t => t.revenue_stream === 'payment_gateway').length },
+              { id: 'checkout_abandonment', label: '🛒 Cart Drop-offs',    count: transactions.filter(t => t.revenue_stream === 'checkout_abandonment').length },
+              { id: 'subscription_renewal', label: '🔄 Subscriptions',     count: transactions.filter(t => t.revenue_stream === 'subscription_renewal').length },
+              { id: 'b2b_invoice',          label: '🏢 B2B Invoices',      count: transactions.filter(t => t.revenue_stream === 'b2b_invoice').length },
+              { id: 'ptp',                  label: '🤝 PTP Tracker',       count: transactions.filter(t => ['committed', 'kept', 'broken'].includes(t.ptp_status)).length },
+            ].map(st => {
+              const isSel = selectedStream === st.id;
+              return (
+                <button
+                  key={st.id}
+                  onClick={() => { setSelectedStream(st.id); setActiveTab('transactions'); }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    isSel
+                      ? 'bg-slate-900 text-white shadow-sm'
+                      : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200'
+                  }`}
+                >
+                  <span>{st.label}</span>
+                  <span className={`text-2xs px-1.5 py-0.2 rounded-full font-mono ${
+                    isSel ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                  }`}>
+                    {st.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Content area */}
         <div className="animate-fade">
           {activeTab === 'transactions' && (
             <TransactionTable
               transactions={transactions}
+              selectedStream={selectedStream}
               onRowClick={setSelectedTxn}
               isLoading={loadingTxns}
             />

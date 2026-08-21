@@ -4,12 +4,17 @@ import {
 } from 'recharts';
 
 const REASON_CONFIG = {
-  insufficient_funds: { label: 'Insuf. Funds',  color: '#d97706' },
-  card_expired:       { label: 'Card Expired',  color: '#ea580c' },
-  bank_timeout:       { label: 'Bank Timeout',  color: '#1d4ed8' },
-  mandate_expired:    { label: 'Mandate Exp.',  color: '#7c3aed' },
-  network_error:      { label: 'Network Err.',  color: '#0891b2' },
-  unknown:            { label: 'Unknown',       color: '#94a3b8' },
+  insufficient_funds:          { label: 'Insuf. Funds',     color: '#d97706' },
+  card_expired:                { label: 'Card Expired',     color: '#ea580c' },
+  bank_timeout:                { label: 'Bank Timeout',     color: '#1d4ed8' },
+  mandate_expired:             { label: 'Mandate Exp.',     color: '#7c3aed' },
+  network_error:               { label: 'Network Err.',     color: '#0891b2' },
+  checkout_hesitation:         { label: 'Cart Hesitation',  color: '#f97316' },
+  otp_dropoff:                 { label: 'OTP Drop-off',     color: '#e11d48' },
+  invoice_overdue_30d:         { label: 'Invoice 30d Due',  color: '#0d9488' },
+  invoice_overdue_60d:         { label: 'Invoice 60d+ Due', color: '#be123c' },
+  subscription_failed_billing: { label: 'Sub Billing Drop', color: '#6d28d9' },
+  unknown:                     { label: 'Unknown/Other',    color: '#94a3b8' },
 };
 
 const fmtINR = (v) =>

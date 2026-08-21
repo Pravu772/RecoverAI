@@ -69,11 +69,11 @@ const SummaryCards = ({ summary, isLoading }) => {
   const exceptionTotal = (s.exceptions_count || 0) + (s.pending_human_count || 0) + (s.max_retries_count || 0);
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
       <MetricCard
         label="Total at Risk"
         value={s.total_amount_at_risk || 0}
-        sub={`${s.total_transactions || 0} transactions`}
+        sub={`${s.total_transactions || 0} revenue items`}
         Icon={IconAlertTriangle}
         accentColor="#d97706"
         isCurrency
@@ -82,7 +82,7 @@ const SummaryCards = ({ summary, isLoading }) => {
       <MetricCard
         label="Amount Recovered"
         value={s.total_recovered_amount || 0}
-        sub={`${s.status_breakdown?.recovered || 0} transactions`}
+        sub={`${s.status_breakdown?.recovered || 0} items recovered`}
         Icon={IconCheckCircle}
         accentColor="#059669"
         isCurrency
@@ -91,16 +91,25 @@ const SummaryCards = ({ summary, isLoading }) => {
       <MetricCard
         label="Recovery Rate"
         value={s.recovery_rate_percent || 0}
-        sub="of all transactions"
+        sub="across all streams"
         Icon={IconTrendingUp}
         accentColor="#1d4ed8"
         isPercent
         isLoading={isLoading}
       />
       <MetricCard
+        label="PTP Commitments"
+        value={s.ptp_committed_amount || 0}
+        sub={`${s.ptp_committed_count || 0} promised payments`}
+        Icon={IconCheckCircle}
+        accentColor="#7c3aed"
+        isCurrency
+        isLoading={isLoading}
+      />
+      <MetricCard
         label="Needs Attention"
         value={exceptionTotal}
-        sub="exceptions + human review"
+        sub="exceptions + escalated"
         Icon={IconXCircle}
         accentColor="#dc2626"
         isLoading={isLoading}
@@ -110,3 +119,4 @@ const SummaryCards = ({ summary, isLoading }) => {
 };
 
 export default SummaryCards;
+

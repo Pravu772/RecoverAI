@@ -35,12 +35,23 @@ const RULE_BASED_MAP = {
   // Mandate expired variants
   MANDATE_EXPIRED: 'mandate_expired',
   MANDATE_REVOKED: 'mandate_expired',
+  NACH_MANDATE_REVOKED: 'mandate_expired',
   NACH_MANDATE_EXPIRED: 'mandate_expired',
+  SUBSCRIPTION_RETRY_FAILED: 'subscription_failed_billing',
 
   // Network error variants
   NETWORK_ERROR: 'network_error',
   CONNECTION_ERROR: 'network_error',
   NETWORK_FAILURE: 'network_error',
+
+  // Checkout drop-off variants
+  CHECKOUT_HESITATION_PAYMENT_PAGE: 'checkout_hesitation',
+  OTP_SUBMISSION_DROPOFF: 'otp_dropoff',
+  PAYMENT_POPUP_CLOSED: 'checkout_hesitation',
+
+  // B2B Invoices
+  INVOICE_OVERDUE_30D_UNPAID: 'invoice_overdue_30d',
+  INVOICE_OVERDUE_60D_UNPAID: 'invoice_overdue_60d',
 };
 
 /**
@@ -54,7 +65,7 @@ const classifyTransaction = async (transaction) => {
   // ── STEP 1: Rule-based fast path ─────────────────────────────────────────
   if (RULE_BASED_MAP[code]) {
     const reason = RULE_BASED_MAP[code];
-    const reasoning = `Rule-based classification: failure_code "${transaction.failure_code}" matched known pattern → classified as "${reason}" with confidence 1.0. No AI call required.`;
+    const reasoning = `Rule-based classification: failure_code "${transaction.failure_code}" for stream [${transaction.revenue_stream}] matched pattern → classified as "${reason}" with confidence 1.0.`;
 
     await auditService.log({
       transaction_id: transaction.transaction_id,
@@ -65,7 +76,7 @@ const classifyTransaction = async (transaction) => {
       reasoning,
       outcome: 'success',
       amount: transaction.amount,
-      meta: { method: 'rule_based', failure_code: transaction.failure_code },
+      meta: { method: 'rule_based', failure_code: transaction.failure_code, stream: transaction.revenue_stream },
     });
 
     return {
@@ -80,8 +91,7 @@ const classifyTransaction = async (transaction) => {
   const model = getGeminiModel();
 
   if (!model) {
-    // No API key configured — mark as exception with clear reason
-    const reasoning = `AI classification skipped: GEMINI_API_KEY not configured. Cannot classify ambiguous failure_code "${transaction.failure_code}" with rule-based approach alone.`;
+    const reasoning = `AI classification skipped: GEMINI_API_KEY not configured. Ambiguous code "${transaction.failure_code}" flagged for human review.`;
 
     await auditService.log({
       transaction_id: transaction.transaction_id,
@@ -106,11 +116,10 @@ const classifyTransaction = async (transaction) => {
   }
 
   try {
-    const prompt = buildClassificationPrompt(transaction.failure_code, transaction.amount);
+    const prompt = buildClassificationPrompt(transaction);
     const result = await model.generateContent(prompt);
     const responseText = result.response.text();
 
-    // Parse the JSON response (responseMimeType: 'application/json' guarantees valid JSON)
     let parsed;
     try {
       parsed = JSON.parse(responseText);
@@ -120,14 +129,16 @@ const classifyTransaction = async (transaction) => {
 
     const { classified_reason, confidence_score, reasoning } = parsed;
 
-    // Validate the response structure
-    const validReasons = ['insufficient_funds', 'card_expired', 'bank_timeout', 'mandate_expired', 'network_error', 'unknown'];
+    const validReasons = [
+      'insufficient_funds', 'card_expired', 'bank_timeout', 'mandate_expired',
+      'network_error', 'checkout_hesitation', 'otp_dropoff', 'invoice_overdue_30d',
+      'invoice_overdue_60d', 'subscription_failed_billing', 'unknown'
+    ];
     const normalizedReason = validReasons.includes(classified_reason) ? classified_reason : 'unknown';
     const normalizedScore = Math.max(0, Math.min(1, parseFloat(confidence_score) || 0));
 
     const fullReasoning = `AI classification (Gemini): failure_code "${transaction.failure_code}" → "${normalizedReason}" (confidence: ${normalizedScore.toFixed(2)}). ${reasoning}`;
 
-    // ── STEP 3: Low-confidence check ────────────────────────────────────────
     if (normalizedScore < 0.6) {
       await auditService.log({
         transaction_id: transaction.transaction_id,
@@ -170,10 +181,9 @@ const classifyTransaction = async (transaction) => {
       used_ai: true,
     };
   } catch (apiError) {
-    // ── Graceful fallback: API error → exception, never crash ───────────────
     console.error(`Gemini API error for ${transaction.transaction_id}:`, apiError.message);
 
-    const reasoning = `AI classification failed for failure_code "${transaction.failure_code}": ${apiError.message}. Flagged as exception for human review.`;
+    const reasoning = `AI classification failed for failure_code "${transaction.failure_code}": ${apiError.message}. Flagged as exception.`;
 
     await auditService.log({
       transaction_id: transaction.transaction_id,
@@ -200,26 +210,36 @@ const classifyTransaction = async (transaction) => {
 
 /**
  * Builds the structured classification prompt for Gemini.
- * Instructs it to return a strict JSON object with defined fields only.
  */
-const buildClassificationPrompt = (failureCode, amount) => `
-You are a payment failure classification system for an Indian fintech company.
+const buildClassificationPrompt = (transaction) => `
+You are an autonomous AI Revenue Recovery classification agent for an Indian fintech platform.
 
-A payment transaction of ₹${amount} has failed with the error code: "${failureCode}"
+Analyze this revenue-at-risk record:
+- Revenue Stream: ${transaction.revenue_stream || 'payment_gateway'}
+- Merchant/Platform: ${transaction.merchant_id}
+- Customer Name: ${transaction.customer_name || 'Customer'}
+- Amount: ₹${transaction.amount}
+- Failure / Drop Code: "${transaction.failure_code}"
+- Details: ${transaction.cart_summary || transaction.subscription_tier || (transaction.invoice_aging_days ? `${transaction.invoice_aging_days} days overdue` : 'N/A')}
 
-Classify this failure into EXACTLY ONE of these categories:
-- "insufficient_funds" — customer doesn't have enough money/credit
-- "card_expired" — card validity date has passed
-- "bank_timeout" — bank/gateway didn't respond in time (transient)
-- "mandate_expired" — recurring payment mandate/authorization has expired
-- "network_error" — connectivity or network-level failure (transient)
-- "unknown" — genuinely cannot determine from available information
+Classify into EXACTLY ONE of these categories:
+- "insufficient_funds" — customer has insufficient balance/credit limit
+- "card_expired" — card validity has lapsed
+- "bank_timeout" — bank/NPCI/gateway transient delay or timeout
+- "mandate_expired" — recurring auto-debit / NACH mandate revoked or expired
+- "network_error" — network connectivity / socket drop
+- "checkout_hesitation" — user abandoned during cart checkout before final authorization
+- "otp_dropoff" — user stopped at 3D Secure / OTP SMS verification step
+- "invoice_overdue_30d" — B2B invoice past Net-30 payment terms
+- "invoice_overdue_60d" — B2B invoice seriously delinquent (>60 days)
+- "subscription_failed_billing" — SaaS/OTT subscription recurrent billing failure
+- "unknown" — genuinely unclassifiable
 
-Respond with ONLY a JSON object in this exact format (no markdown, no extra text):
+Respond with ONLY a JSON object:
 {
-  "classified_reason": "<one of the six categories above>",
+  "classified_reason": "<one of the exact categories above>",
   "confidence_score": <number between 0.0 and 1.0>,
-  "reasoning": "<one sentence explanation of why you chose this category>"
+  "reasoning": "<one sentence concise explanation of why you classified it as such>"
 }
 `.trim();
 

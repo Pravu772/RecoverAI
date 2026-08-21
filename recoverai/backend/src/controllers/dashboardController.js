@@ -3,17 +3,11 @@ const auditService = require('../services/auditService');
 
 /**
  * Dashboard Controller
- * Provides aggregate metrics for the RecoverAI dashboard.
+ * Provides aggregate metrics for the RecoverAI multi-stream revenue recovery dashboard.
  */
 
-/**
- * GET /api/dashboard/summary
- * Returns high-level recovery metrics and breakdown by failure reason.
- */
 const getSummary = async (req, res) => {
-  // Aggregate all transactions
   const allTransactions = await Transaction.find({}).lean();
-
   const total_transactions = allTransactions.length;
 
   if (total_transactions === 0) {
@@ -26,13 +20,15 @@ const getSummary = async (req, res) => {
       pending_human_count: 0,
       max_retries_count: 0,
       opted_out_count: 0,
+      ptp_committed_count: 0,
+      ptp_committed_amount: 0,
+      breakdown_by_stream: {},
       breakdown_by_reason: {},
       status_breakdown: {},
     });
   }
 
   const total_amount_at_risk = allTransactions.reduce((sum, t) => sum + t.amount, 0);
-
   const recovered = allTransactions.filter(t => t.status === 'recovered');
   const total_recovered_amount = recovered.reduce((sum, t) => sum + t.amount, 0);
 
@@ -45,17 +41,22 @@ const getSummary = async (req, res) => {
   const max_retries_count = allTransactions.filter(t => t.status === 'max_retries_reached').length;
   const opted_out_count = allTransactions.filter(t => t.status === 'opted_out').length;
 
-  // Breakdown by classified_reason
-  const reasons = ['insufficient_funds', 'card_expired', 'bank_timeout', 'mandate_expired', 'network_error', 'unknown'];
-  const breakdown_by_reason = {};
+  // PTP metrics
+  const ptp_committed_txns = allTransactions.filter(t => ['committed', 'kept'].includes(t.ptp_status));
+  const ptp_committed_count = ptp_committed_txns.length;
+  const ptp_committed_amount = ptp_committed_txns.reduce((sum, t) => sum + (t.ptp_amount || t.amount), 0);
 
-  for (const reason of reasons) {
-    const group = allTransactions.filter(t => t.classified_reason === reason);
+  // Breakdown by Revenue Stream
+  const streams = ['payment_gateway', 'checkout_abandonment', 'subscription_renewal', 'b2b_invoice'];
+  const breakdown_by_stream = {};
+
+  for (const st of streams) {
+    const group = allTransactions.filter(t => t.revenue_stream === st);
     const groupRecovered = group.filter(t => t.status === 'recovered');
     const groupAmount = group.reduce((sum, t) => sum + t.amount, 0);
     const groupRecoveredAmount = groupRecovered.reduce((sum, t) => sum + t.amount, 0);
 
-    breakdown_by_reason[reason] = {
+    breakdown_by_stream[st] = {
       total: group.length,
       recovered: groupRecovered.length,
       amount_at_risk: groupAmount,
@@ -64,6 +65,33 @@ const getSummary = async (req, res) => {
         ? parseFloat(((groupRecovered.length / group.length) * 100).toFixed(1))
         : 0,
     };
+  }
+
+  // Breakdown by classified_reason
+  const reasons = [
+    'insufficient_funds', 'card_expired', 'bank_timeout', 'mandate_expired',
+    'network_error', 'checkout_hesitation', 'otp_dropoff', 'invoice_overdue_30d',
+    'invoice_overdue_60d', 'subscription_failed_billing', 'unknown'
+  ];
+  const breakdown_by_reason = {};
+
+  for (const reason of reasons) {
+    const group = allTransactions.filter(t => t.classified_reason === reason);
+    const groupRecovered = group.filter(t => t.status === 'recovered');
+    const groupAmount = group.reduce((sum, t) => sum + t.amount, 0);
+    const groupRecoveredAmount = groupRecovered.reduce((sum, t) => sum + t.amount, 0);
+
+    if (group.length > 0) {
+      breakdown_by_reason[reason] = {
+        total: group.length,
+        recovered: groupRecovered.length,
+        amount_at_risk: groupAmount,
+        amount_recovered: groupRecoveredAmount,
+        recovery_rate: group.length > 0
+          ? parseFloat(((groupRecovered.length / group.length) * 100).toFixed(1))
+          : 0,
+      };
+    }
   }
 
   // Status breakdown
@@ -81,15 +109,14 @@ const getSummary = async (req, res) => {
     pending_human_count,
     max_retries_count,
     opted_out_count,
+    ptp_committed_count,
+    ptp_committed_amount,
+    breakdown_by_stream,
     breakdown_by_reason,
     status_breakdown: statusCounts,
   });
 };
 
-/**
- * GET /api/audit/:transaction_id
- * Returns the full audit trail for a specific transaction.
- */
 const getAuditTrail = async (req, res) => {
   const { transaction_id } = req.params;
 
@@ -107,3 +134,4 @@ const getAuditTrail = async (req, res) => {
 };
 
 module.exports = { getSummary, getAuditTrail };
+

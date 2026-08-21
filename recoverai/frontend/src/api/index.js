@@ -38,6 +38,17 @@ export const recoverOne = (id) =>
 export const getTransactions = (params = {}) =>
   api.get('/transactions', { params }).then(r => r.data);
 
+// ── Voice AI & PTP endpoints ──────────────────────────────────────────────────
+
+export const getOrGenerateVoiceScript = (id) =>
+  api.post(`/transactions/${id}/voice-script`).then(r => r.data);
+
+export const setPromiseToPay = (id, data) =>
+  api.post(`/transactions/${id}/ptp`, data).then(r => r.data);
+
+export const updatePTPStatus = (id, status) =>
+  api.post(`/transactions/${id}/ptp-status`, { status }).then(r => r.data);
+
 // ── Audit trail ───────────────────────────────────────────────────────────────
 
 export const getAuditTrail = (transactionId) =>
@@ -60,3 +71,4 @@ export const getSimulatedTime = () =>
   api.get('/simulate/time').then(r => r.data);
 
 export default api;
+
