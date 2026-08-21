@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { IconAlertTriangle, IconCheckCircle, IconTrendingUp, IconXCircle } from './Icons.jsx';
+import { IconAlertTriangle, IconCheckCircle, IconTrendingUp, IconXCircle, IconCalendar } from './Icons.jsx';
 
 /** Smooth count-up animation hook */
 const useCountUp = (target, duration = 900) => {

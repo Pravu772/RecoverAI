@@ -3,7 +3,7 @@ import { getAuditTrail, getOrGenerateVoiceScript, setPromiseToPay, updatePTPStat
 import {
   IconX, IconCheckCircle, IconAlertTriangle, IconZap, IconShield, IconActivity,
   IconMic, IconCalendar, IconRepeat, IconPlay, IconPause, IconSquare,
-  IconCopy, IconCheck, IconVolume2, IconUser, IconLayers
+  IconCopy, IconCheck, IconVolume2, IconUser, IconLayers, IconXCircle
 } from './Icons.jsx';
 
 const EVENT_CONFIG = {
