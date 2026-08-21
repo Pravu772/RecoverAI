@@ -9,10 +9,10 @@ const connectDB = async () => {
     const conn = await mongoose.connect(process.env.MONGO_URI, {
       serverSelectionTimeoutMS: 5000, // Fail fast on bad URI
     });
-    console.log(`✅ MongoDB connected: ${conn.connection.host}`);
+    console.log(`[Database] MongoDB connected: ${conn.connection.host}`);
+    return conn;
   } catch (error) {
-    console.error(`❌ MongoDB connection failed: ${error.message}`);
-    console.error('   Check your MONGO_URI in .env — is MongoDB running?');
+    console.error(`[Database] MongoDB connection failed: ${error.message}`);
     process.exit(1);
   }
 };

@@ -200,7 +200,7 @@ const setPromiseToPay = async (req, res) => {
     detected_reason: transaction.classified_reason,
     confidence_score: transaction.confidence_score,
     action_taken: 'ptp_commitment_logged',
-    reasoning: `🤝 Customer ${transaction.customer_name} promised to pay ₹${transaction.ptp_amount} by ${transaction.ptp_date.toISOString()}. Automated reminders scheduled.`,
+    reasoning: `Customer ${transaction.customer_name} promised to pay ₹${transaction.ptp_amount} by ${transaction.ptp_date.toISOString()}. Automated reminders scheduled.`,
     outcome: 'pending',
     amount: transaction.amount,
     meta: { ptp_date: transaction.ptp_date, notes: transaction.ptp_notes },
@@ -233,7 +233,7 @@ const updatePTPStatus = async (req, res) => {
       detected_reason: transaction.classified_reason,
       confidence_score: transaction.confidence_score,
       action_taken: 'ptp_fulfilled',
-      reasoning: `✅ Promise-to-Pay KEPT: Customer ${transaction.customer_name} paid ₹${transaction.amount} on time.`,
+      reasoning: `Promise-to-Pay KEPT: Customer ${transaction.customer_name} paid ₹${transaction.amount} on time.`,
       outcome: 'success',
       amount: transaction.amount,
     });
@@ -245,7 +245,7 @@ const updatePTPStatus = async (req, res) => {
       detected_reason: transaction.classified_reason,
       confidence_score: transaction.confidence_score,
       action_taken: 'ptp_broken_escalate',
-      reasoning: `⚠️ Promise-to-Pay BROKEN: Customer ${transaction.customer_name} missed deadline ${transaction.ptp_date}. Escalating to human collections.`,
+      reasoning: `Promise-to-Pay BROKEN: Customer ${transaction.customer_name} missed deadline ${transaction.ptp_date}. Escalating to human collections.`,
       outcome: 'failure',
       amount: transaction.amount,
     });
@@ -284,6 +284,62 @@ const listTransactions = async (req, res) => {
   });
 };
 
+/**
+ * POST /api/transactions/inject-single
+ * Injects a single custom revenue-at-risk failure from the interactive playground.
+ */
+const injectSingleTransaction = async (req, res) => {
+  const { v4: uuidv4 } = require('uuid');
+  const {
+    customer_name,
+    customer_phone,
+    amount,
+    revenue_stream,
+    failure_code,
+    merchant_id,
+    cart_summary,
+    invoice_id,
+    invoice_aging_days,
+  } = req.body;
+
+  const txn = new Transaction({
+    transaction_id: `TXN_${uuidv4().substring(0, 8).toUpperCase()}`,
+    revenue_stream: revenue_stream || 'payment_gateway',
+    merchant_id: merchant_id || 'MER_PLAYGROUND',
+    customer_id: `CUST_${uuidv4().substring(0, 6).toUpperCase()}`,
+    customer_name: customer_name || 'Sandbox Customer',
+    customer_phone: customer_phone || '+91 98765 00000',
+    customer_email: 'sandbox@recoverai.internal',
+    amount: Number(amount) || 5000,
+    failure_code: failure_code || 'BANK_TIMEOUT',
+    cart_summary,
+    invoice_id,
+    invoice_aging_days: invoice_aging_days ? Number(invoice_aging_days) : undefined,
+    status: 'failed',
+    opted_out: false,
+    attempt_count: 0,
+    created_at: new Date(),
+  });
+
+  await txn.save();
+
+  await auditService.log({
+    transaction_id: txn.transaction_id,
+    action_type: 'classification',
+    detected_reason: 'pending_classification',
+    confidence_score: 0,
+    action_taken: 'interactive_injection',
+    reasoning: `Custom scenario injected via Interactive Studio [${txn.revenue_stream}]: Error "${txn.failure_code}", Amount: ₹${txn.amount}.`,
+    outcome: 'success',
+    amount: txn.amount,
+  });
+
+  res.status(201).json({
+    message: 'Custom failure scenario injected successfully',
+    transaction: txn,
+  });
+};
+
 const summarize = (txn) => ({
   transaction_id: txn.transaction_id,
   revenue_stream: txn.revenue_stream,
@@ -304,6 +360,7 @@ module.exports = {
   getOrGenerateVoiceScript,
   setPromiseToPay,
   updatePTPStatus,
-  listTransactions
+  listTransactions,
+  injectSingleTransaction,
 };
 

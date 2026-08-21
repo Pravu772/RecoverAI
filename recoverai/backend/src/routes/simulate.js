@@ -38,7 +38,7 @@ router.post('/advance-time', async (req, res) => {
         detected_reason: txn.classified_reason,
         confidence_score: txn.confidence_score,
         action_taken: 'ptp_auto_fulfilled',
-        reasoning: `✅ Promise-to-Pay KEPT: Customer ${txn.customer_name} fulfilled payment of ₹${txn.amount} on simulated deadline.`,
+        reasoning: `Promise-to-Pay KEPT: Customer ${txn.customer_name} fulfilled payment of ₹${txn.amount} on simulated deadline.`,
         outcome: 'success',
         amount: txn.amount,
       });
@@ -51,7 +51,7 @@ router.post('/advance-time', async (req, res) => {
         detected_reason: txn.classified_reason,
         confidence_score: txn.confidence_score,
         action_taken: 'ptp_deadline_expired_escalation',
-        reasoning: `⚠️ Promise-to-Pay BROKEN: Deadline ${txn.ptp_date?.toISOString()} passed without payment. Escalated to priority collection agent.`,
+        reasoning: `Promise-to-Pay BROKEN: Deadline ${txn.ptp_date?.toISOString()} passed without payment. Escalated to priority collection agent.`,
         outcome: 'failure',
         amount: txn.amount,
       });

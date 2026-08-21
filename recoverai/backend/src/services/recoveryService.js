@@ -275,7 +275,7 @@ const executeRecovery = async (transaction) => {
       detected_reason: transaction.classified_reason,
       confidence_score: transaction.confidence_score,
       action_taken: action,
-      reasoning: `✅ Revenue of ₹${transaction.amount.toLocaleString('en-IN')} successfully recovered via ${action} on attempt #${nextAttemptCount}.`,
+      reasoning: `Revenue of ₹${transaction.amount.toLocaleString('en-IN')} successfully recovered via ${action} on attempt #${nextAttemptCount}.`,
       outcome: 'success',
       amount: transaction.amount,
       meta: { recovered_amount: transaction.amount },
@@ -337,9 +337,9 @@ const buildRecoveryReasoning = (transaction, action, attemptNumber, simulated_ou
   }[action] || 'standard recovery intervention';
 
   const outcomeStr = {
-    payment_succeeded: `✅ RECOVERED — ${amountStr} collected`,
-    payment_failed_again: `❌ Unrecovered — ${attemptNumber >= MAX_ATTEMPTS ? 'max retries reached' : 'queued for next step'}`,
-    escalated_to_human: `👤 Escalated to human operator`,
+    payment_succeeded: `RECOVERED — ${amountStr} collected`,
+    payment_failed_again: `Unrecovered — ${attemptNumber >= MAX_ATTEMPTS ? 'max retries reached' : 'queued for next step'}`,
+    escalated_to_human: `Escalated to human operator`,
   }[simulated_outcome] || simulated_outcome;
 
   return `Attempt #${attemptNumber} [${transaction.revenue_stream}]: Classified as "${transaction.classified_reason}". Action "${action}" (${rationale}). Outcome: ${outcomeStr}.`;

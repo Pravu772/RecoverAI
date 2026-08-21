@@ -7,11 +7,15 @@ const {
   getOrGenerateVoiceScript,
   setPromiseToPay,
   updatePTPStatus,
-  listTransactions
+  listTransactions,
+  injectSingleTransaction,
 } = require('../controllers/transactionController');
 
 // Generate synthetic batch
 router.post('/generate', generateBatch);
+
+// Inject single custom failure
+router.post('/inject-single', injectSingleTransaction);
 
 // Classify batch (all failed)
 router.post('/classify-batch', classifyBatch);

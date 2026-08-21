@@ -25,7 +25,7 @@ const getSimulatedNow = () => new Date(Date.now() + TIME_OFFSET_MS);
  */
 const advanceTime = (days) => {
   TIME_OFFSET_MS += days * 24 * 60 * 60 * 1000;
-  console.log(`⏩ Simulated time advanced by ${days} day(s). Offset: ${TIME_OFFSET_MS / 3600000}h`);
+  console.log(`[Scheduler] Simulated time advanced by ${days} day(s). Offset: ${TIME_OFFSET_MS / 3600000}h`);
 };
 
 /**
@@ -33,7 +33,7 @@ const advanceTime = (days) => {
  */
 const resetTime = () => {
   TIME_OFFSET_MS = 0;
-  console.log('🔄 Simulated time reset to real time');
+  console.log('Simulated time reset to real time');
 };
 
 /**

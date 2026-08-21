@@ -5,6 +5,7 @@ const express = require('express');
 const cors = require('cors');
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./src/config/db');
+const { sanitizeDatabase } = require('./src/utils/sanitizeDatabase');
 
 // ── Route imports ─────────────────────────────────────────────────────────────
 const transactionRoutes = require('./src/routes/transactions');
@@ -16,8 +17,10 @@ const simulateRoutes = require('./src/routes/simulate');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ── Connect to MongoDB ────────────────────────────────────────────────────────
-connectDB();
+// ── Connect to MongoDB & Sanitize ─────────────────────────────────────────────
+connectDB().then(() => {
+  sanitizeDatabase();
+});
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 
@@ -75,7 +78,7 @@ app.get('/health', (req, res) => {
 // ── Global Error Handler ──────────────────────────────────────────────────────
 // express-async-errors patches async route handlers so uncaught errors reach here
 app.use((err, req, res, next) => {
-  console.error('❌ Unhandled error:', err.message);
+  console.error('[Server] Unhandled error:', err.message);
   console.error(err.stack);
 
   // Don't expose stack traces in production

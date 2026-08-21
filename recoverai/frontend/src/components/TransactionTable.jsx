@@ -65,18 +65,18 @@ const ConfidencePopover = ({ score, txn }) => {
       {open && (
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 bottom-full mb-2 w-64 p-3 bg-slate-900 text-white rounded-xl shadow-xl z-40 text-xs border border-slate-700 animate-fade">
-            <div className="flex items-center justify-between mb-1.5 pb-1.5 border-b border-slate-800">
-              <span className="font-bold text-indigo-300 flex items-center gap-1">
+          <div className="absolute left-0 bottom-full mb-2 w-64 p-3 bg-white text-slate-900 rounded-xl shadow-xl z-40 text-xs border border-slate-200 animate-fade">
+            <div className="flex items-center justify-between mb-1.5 pb-1.5 border-b border-slate-100">
+              <span className="font-bold text-indigo-700 flex items-center gap-1">
                 <IconBrain className="w-3.5 h-3.5" />
                 Gemini Reasoning
               </span>
-              <span className="font-mono text-2xs text-emerald-400">{pct}% Confidence</span>
+              <span className="font-mono text-2xs text-emerald-600 font-bold">{pct}% Confidence</span>
             </div>
-            <p className="text-2xs text-slate-300 leading-relaxed">
-              Diagnosed <strong>{txn.classified_reason?.replace(/_/g, ' ')}</strong> from gateway code <code className="text-indigo-200 font-mono">{txn.failure_code}</code>.
+            <p className="text-2xs text-slate-600 leading-relaxed">
+              Diagnosed <strong>{txn.classified_reason?.replace(/_/g, ' ')}</strong> from gateway code <code className="text-indigo-700 bg-indigo-50 px-1 py-0.2 rounded border border-indigo-200 font-mono">{txn.failure_code}</code>.
             </p>
-            <div className="mt-2 pt-2 border-t border-slate-800 flex items-center justify-between text-2xs text-slate-400 font-mono">
+            <div className="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between text-2xs text-slate-400 font-mono">
               <span>Model: Flash-2.5</span>
               <span>Latency: 78ms</span>
             </div>
@@ -283,26 +283,26 @@ const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream 
 
       {/* Floating Sticky Bulk Actions Bar */}
       {selectedIds.length > 0 && (
-        <div className="sticky top-0 z-20 px-4 py-2.5 bg-slate-900 text-white flex items-center justify-between gap-4 animate-fade shadow-md">
+        <div className="sticky top-0 z-20 px-4 py-2.5 bg-indigo-50 border-b border-indigo-200 text-indigo-950 flex items-center justify-between gap-4 animate-fade shadow-xs">
           <div className="flex items-center gap-3">
-            <span className="text-xs font-bold font-mono bg-indigo-600 px-2 py-0.5 rounded">
+            <span className="text-xs font-bold font-mono bg-indigo-600 text-white px-2 py-0.5 rounded">
               {selectedIds.length} Selected
             </span>
-            <span className="text-2xs text-slate-300">
-              Bulk interventions available across selection
+            <span className="text-2xs text-indigo-800 font-medium">
+              Bulk actions available across selection
             </span>
           </div>
 
           <div className="flex items-center gap-2">
             <button
               onClick={handleExportCSV}
-              className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded text-xs font-semibold transition-colors"
+              className="px-3 py-1 bg-white hover:bg-indigo-100/50 text-indigo-900 border border-indigo-200 rounded text-xs font-semibold transition-colors shadow-2xs"
             >
               Export Selected ({selectedIds.length})
             </button>
             <button
               onClick={() => setSelectedIds([])}
-              className="text-2xs text-slate-400 hover:text-white px-2 py-1"
+              className="text-2xs text-indigo-600 hover:text-indigo-900 px-2 py-1 font-medium"
             >
               Clear Selection
             </button>

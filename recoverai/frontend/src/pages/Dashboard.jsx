@@ -10,10 +10,14 @@ import ExecutiveROIBanner     from '../components/ExecutiveROIBanner.jsx';
 import LiveActivityFeed       from '../components/LiveActivityFeed.jsx';
 import ComplianceRulebookModal from '../components/ComplianceRulebookModal.jsx';
 import CommandPaletteModal    from '../components/CommandPaletteModal.jsx';
+import FailureInjectionModal  from '../components/FailureInjectionModal.jsx';
+import PolicyTuningModal      from '../components/PolicyTuningModal.jsx';
+import CFODigestModal         from '../components/CFODigestModal.jsx';
+import ToastContainer         from '../components/ToastContainer.jsx';
 import {
   IconRefreshCw, IconList, IconAlertTriangle, IconBarChart2,
   IconZap, IconShoppingCart, IconRepeat, IconFileText, IconCalendar, IconLayers,
-  IconSearch, IconShield
+  IconSearch, IconShield, IconPlay
 } from '../components/Icons.jsx';
 
 const TABS = [
@@ -40,10 +44,22 @@ const Dashboard = () => {
   const [activeTab,        setActiveTab]        = useState('transactions');
   const [selectedStream,   setSelectedStream]   = useState('all');
   const [lastRefreshed,    setLastRefreshed]    = useState(null);
+  const [toasts,           setToasts]           = useState([]);
 
   // Modals state
   const [complianceOpen,   setComplianceOpen]   = useState(false);
   const [paletteOpen,      setPaletteOpen]      = useState(false);
+  const [injectionOpen,    setInjectionOpen]    = useState(false);
+  const [policyOpen,       setPolicyOpen]       = useState(false);
+  const [cfoOpen,          setCfoOpen]          = useState(false);
+
+  const addToast = (title, message, type = 'info') => {
+    const id = Date.now();
+    setToasts(prev => [...prev, { id, title, message, type }]);
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id));
+    }, 4000);
+  };
 
   const refresh = useCallback(async () => {
     setLoadingTxns(true);
@@ -155,6 +171,16 @@ const Dashboard = () => {
 
           {/* Controls & Environment Status */}
           <div className="flex items-center gap-3 flex-shrink-0">
+            {/* Simulate Custom Failure Button */}
+            <button
+              onClick={() => setInjectionOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100/70 border border-indigo-200 text-indigo-700 text-2xs font-bold transition-all shadow-2xs"
+              title="Inject a custom failure scenario live"
+            >
+              <IconZap className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Simulate Gateway Drop</span>
+            </button>
+
             {/* Spotlight Search Shortcut Button */}
             <button
               onClick={() => setPaletteOpen(true)}
@@ -200,6 +226,8 @@ const Dashboard = () => {
         <ExecutiveROIBanner
           summary={summary}
           onOpenCompliance={() => setComplianceOpen(true)}
+          onOpenCFO={() => setCfoOpen(true)}
+          onOpenPolicy={() => setPolicyOpen(true)}
         />
 
         {/* Executive Overview Grid */}
@@ -312,6 +340,39 @@ const Dashboard = () => {
         onRunBatch={handleRunBatchFromPalette}
         onAdvanceTime={handleAdvanceTimeFromPalette}
         onOpenCompliance={() => setComplianceOpen(true)}
+      />
+
+      {/* ── Failure Injection Playground Modal ──────────────────────────────── */}
+      <FailureInjectionModal
+        isOpen={injectionOpen}
+        onClose={() => setInjectionOpen(false)}
+        onSuccess={() => {
+          refresh();
+          addToast('Failure Injected', 'Custom scenario processed through Gemini classifier and recovery engine.', 'success');
+        }}
+      />
+
+      {/* ── Policy Tuning Studio Modal ──────────────────────────────────────── */}
+      <PolicyTuningModal
+        isOpen={policyOpen}
+        onClose={() => setPolicyOpen(false)}
+        onSave={(params) => {
+          addToast('Policy Updated', `Governance invariants applied: ${params.maxAttempts} max retries, ${params.confidenceCutoff}% confidence cutoff.`, 'success');
+        }}
+      />
+
+      {/* ── CFO Digest Briefing Modal ───────────────────────────────────────── */}
+      <CFODigestModal
+        isOpen={cfoOpen}
+        onClose={() => setCfoOpen(false)}
+        summary={summary}
+        transactions={transactions}
+      />
+
+      {/* ── Toast Notifications Stack ──────────────────────────────────────── */}
+      <ToastContainer
+        toasts={toasts}
+        onDismiss={(id) => setToasts(prev => prev.filter(t => t.id !== id))}
       />
     </div>
   );

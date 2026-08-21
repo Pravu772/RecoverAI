@@ -65,19 +65,19 @@ const ComplianceRulebookModal = ({ isOpen, onClose }) => {
       <div className="relative bg-white rounded-2xl border border-slate-200 shadow-2xl max-w-2xl w-full overflow-hidden z-10 animate-fade">
         
         {/* Header */}
-        <div className="px-6 py-4 bg-slate-900 text-white flex items-center justify-between">
+        <div className="px-6 py-4 bg-white border-b border-slate-200 text-slate-900 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-indigo-300">
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700">
               <IconShield className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <span className="text-2xs font-bold uppercase tracking-widest px-2 py-0.2 rounded bg-indigo-500/30 text-indigo-300">
+                <span className="text-2xs font-bold uppercase tracking-widest px-2 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
                   Compliance Rulebook
                 </span>
-                <span className="text-2xs text-slate-400 font-mono">The Bar Invariants</span>
+                <span className="text-2xs text-slate-500 font-mono">The Bar Invariants</span>
               </div>
-              <h3 className="text-sm font-bold text-white mt-0.5">
+              <h3 className="text-sm font-bold text-slate-900 mt-0.5">
                 Autonomous Recovery Policy & Safety Guardrails
               </h3>
             </div>
@@ -85,7 +85,7 @@ const ComplianceRulebookModal = ({ isOpen, onClose }) => {
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition-colors"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
           >
             <IconX className="w-4 h-4" />
           </button>

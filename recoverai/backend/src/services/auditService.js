@@ -36,10 +36,8 @@ const log = async (entry) => {
     });
 
     await auditEntry.save();
-    return auditEntry;
   } catch (err) {
-    // Audit logging should never crash the main pipeline
-    console.error(`⚠️  Audit log write failed for ${entry.transaction_id}:`, err.message);
+    console.error(`[AuditService] Audit log write failed for ${entry.transaction_id}:`, err.message);
     return null;
   }
 };

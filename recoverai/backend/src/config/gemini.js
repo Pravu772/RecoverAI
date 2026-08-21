@@ -8,8 +8,8 @@ let geminiClient = null;
  * Returns null if API key is missing (allows graceful degradation).
  */
 const getGeminiModel = () => {
-  if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === 'your_gemini_api_key_here') {
-    console.warn('⚠️  GEMINI_API_KEY not set — AI classification will fallback to rule-based only');
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey || apiKey === 'your_gemini_api_key_here') {
     return null;
   }
 

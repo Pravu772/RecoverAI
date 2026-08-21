@@ -285,9 +285,10 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-slate-200 bg-white px-6 gap-6">
+        <div className="flex border-b border-slate-200 bg-white px-6 gap-6 overflow-x-auto">
           {[
             { id: 'timeline', label: 'Decision Provenance', Icon: IconActivity },
+            { id: 'dispatch', label: 'Channel Previews',    Icon: IconLayers },
             { id: 'voice',    label: 'Voice Recovery AI',   Icon: IconMic },
             { id: 'ptp',      label: 'PTP Lifecycle',       Icon: IconCalendar },
             { id: 'mandate',  label: 'Mandate Sequencer',   Icon: IconRepeat },
@@ -298,7 +299,7 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center gap-2 py-3 text-xs font-semibold border-b-2 transition-all ${
+                className={`flex items-center gap-2 py-3 text-xs font-semibold border-b-2 transition-all whitespace-nowrap ${
                   isActive
                     ? 'border-indigo-600 text-indigo-700'
                     : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -384,7 +385,70 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
             </div>
           )}
 
-          {/* 2. VOICE RECOVERY AI TAB */}
+          {/* 2. MULTI-CHANNEL DISPATCH PREVIEWS TAB */}
+          {activeTab === 'dispatch' && (
+            <div className="space-y-6">
+              
+              {/* WhatsApp Rich Message Preview */}
+              <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-xs">
+                <div className="px-4 py-2.5 bg-emerald-700 text-white flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
+                    <span className="text-xs font-bold">WhatsApp Business Gateway</span>
+                  </div>
+                  <span className="text-2xs font-mono text-emerald-200">Delivered • Encrypted</span>
+                </div>
+
+                <div className="p-4 bg-slate-50/70">
+                  <div className="max-w-[340px] bg-white rounded-2xl rounded-tl-xs p-3.5 border border-slate-200 shadow-xs space-y-2 text-xs">
+                    <p className="font-semibold text-slate-900">
+                      Hi {currentTxn.customer_name || 'there'}, your transaction of <span className="font-bold text-emerald-700">{formatINR(currentTxn.amount)}</span> was not completed.
+                    </p>
+                    <p className="text-2xs text-slate-600 leading-relaxed">
+                      {currentTxn.cart_summary
+                        ? `We saved your items: "${currentTxn.cart_summary}". Click below to resume checkout with 1-click UPI or Card.`
+                        : 'Click below to securely complete your payment with pre-filled payment details.'}
+                    </p>
+                    <div className="pt-2 border-t border-slate-100">
+                      <button className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors text-center">
+                        Complete Payment ({formatINR(currentTxn.amount)})
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* SMS Notification Preview */}
+              <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-xs">
+                <div className="px-4 py-2.5 bg-slate-100 border-b border-slate-200 flex items-center justify-between text-slate-800">
+                  <span className="text-xs font-bold">Telecom SMS Gateway</span>
+                  <span className="text-2xs font-mono text-slate-500">{currentTxn.customer_phone || '+91 98765 43210'}</span>
+                </div>
+                <div className="p-4 bg-slate-50/50">
+                  <div className="p-3 bg-white rounded-xl border border-slate-200 text-xs font-mono text-slate-700 leading-relaxed">
+                    [RECOVERAI] Payment of {formatINR(currentTxn.amount)} at {currentTxn.merchant_id || 'Merchant'} failed ({currentTxn.failure_code}). Tap link to retry immediately: https://pay.recoverai.io/r/{currentTxn.transaction_id}
+                  </div>
+                </div>
+              </div>
+
+              {/* Printable Cryptographic Audit Dossier */}
+              <div className="p-4 rounded-xl bg-indigo-50/50 border border-indigo-200 flex items-center justify-between gap-3">
+                <div>
+                  <h4 className="text-xs font-bold text-indigo-950">Compliance Audit Dossier</h4>
+                  <p className="text-2xs text-indigo-700 mt-0.5">Generate formal SOX/RBI compliance PDF record with SHA-256 hash</p>
+                </div>
+                <button
+                  onClick={() => window.print()}
+                  className="btn-primary text-xs flex-shrink-0"
+                >
+                  Print Dossier
+                </button>
+              </div>
+
+            </div>
+          )}
+
+          {/* 3. VOICE RECOVERY AI TAB */}
           {activeTab === 'voice' && (
             <div className="space-y-5">
               {/* Voice Agent Control Card (Light Modern Theme) */}

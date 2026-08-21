@@ -172,6 +172,70 @@ const BreakdownChart = ({ breakdown }) => {
           })}
         </div>
       </div>
+
+      {/* 4-Stream Capital Yield Waterfall */}
+      <div className="card p-5 xl:col-span-2 bg-slate-50/70 border border-slate-200 shadow-xs">
+        <SectionHeader>Multi-Stream Autonomous Yield Funnel</SectionHeader>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-2">
+          
+          <div className="p-4 rounded-xl bg-white border border-blue-200 shadow-2xs">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-2xs font-bold uppercase text-blue-700">Payment Gateway</span>
+              <span className="text-2xs font-mono text-blue-600 bg-blue-50 px-1.5 py-0.2 rounded">Fast Retries</span>
+            </div>
+            <p className="text-xs text-slate-600 mt-1">
+              Zero-latency network & gateway recovery via alternate routing and scheduled cooldowns.
+            </p>
+            <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between font-mono text-2xs">
+              <span className="text-slate-500">Avg Conversion</span>
+              <span className="font-bold text-blue-700">62% Yield</span>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-white border border-orange-200 shadow-2xs">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-2xs font-bold uppercase text-orange-700">Checkout Cart Drop</span>
+              <span className="text-2xs font-mono text-orange-600 bg-orange-50 px-1.5 py-0.2 rounded">1-Click WhatsApp</span>
+            </div>
+            <p className="text-xs text-slate-600 mt-1">
+              Personalized cart recovery links dispatched with pre-populated order summaries.
+            </p>
+            <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between font-mono text-2xs">
+              <span className="text-slate-500">Avg Conversion</span>
+              <span className="font-bold text-orange-700">54% Yield</span>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-white border border-purple-200 shadow-2xs">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-2xs font-bold uppercase text-purple-700">Recurring Mandates</span>
+              <span className="text-2xs font-mono text-purple-600 bg-purple-50 px-1.5 py-0.2 rounded">Salary-Sync</span>
+            </div>
+            <p className="text-xs text-slate-600 mt-1">
+              Smart auto-debit sequencers synchronized with 1st & 5th of month salary deposits.
+            </p>
+            <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between font-mono text-2xs">
+              <span className="text-slate-500">Avg Conversion</span>
+              <span className="font-bold text-purple-700">71% Yield</span>
+            </div>
+          </div>
+
+          <div className="p-4 rounded-xl bg-white border border-teal-200 shadow-2xs">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-2xs font-bold uppercase text-teal-700">B2B Receivables</span>
+              <span className="text-2xs font-mono text-teal-600 bg-teal-50 px-1.5 py-0.2 rounded">Voice AI + PTP</span>
+            </div>
+            <p className="text-xs text-slate-600 mt-1">
+              Empathetic Hinglish conversational collection agent with automated PTP tracking.
+            </p>
+            <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between font-mono text-2xs">
+              <span className="text-slate-500">Avg Conversion</span>
+              <span className="font-bold text-teal-700">68% Yield</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
     </div>
   );
 };
