@@ -1,7 +1,6 @@
 /**
  * Icons — Inline SVG icon components.
- * All icons are 16x16 by default, strokeWidth=1.75, stroke=currentColor.
- * Pass className to override size/color.
+ * Crisp 16x16 / 20x20 feather-style icons.
  */
 
 const icon = (path, opts = {}) => {
@@ -94,6 +93,14 @@ export const IconPlay = icon(
   <><polygon points="5 3 19 12 5 21 5 3"/></>
 );
 
+export const IconPause = icon(
+  <><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></>
+);
+
+export const IconSquare = icon(
+  <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+);
+
 export const IconArrowRight = icon(
   <><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></>
 );
@@ -118,6 +125,38 @@ export const IconCreditCard = icon(
   <><rect x="1" y="4" width="22" height="16" rx="2" ry="2"/><line x1="1" y1="10" x2="23" y2="10"/></>
 );
 
+export const IconShoppingCart = icon(
+  <><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></>
+);
+
+export const IconRepeat = icon(
+  <><polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/></>
+);
+
+export const IconFileText = icon(
+  <><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></>
+);
+
+export const IconMic = icon(
+  <><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></>
+);
+
+export const IconVolume2 = icon(
+  <><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/></>
+);
+
+export const IconCalendar = icon(
+  <><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>
+);
+
+export const IconCopy = icon(
+  <><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></>
+);
+
+export const IconCheck = icon(
+  <polyline points="20 6 9 17 4 12" />
+);
+
 export const IconWifi = icon(
   <><path d="M5 12.55a11 11 0 0114.08 0"/><path d="M1.42 9a16 16 0 0121.16 0"/><path d="M8.53 16.11a6 16 0 016.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></>
 );
@@ -134,8 +173,8 @@ export const IconMoreHorizontal = icon(
   <><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></>
 );
 
-export const IconEye = icon(
-  <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>
+export const IconLayers = icon(
+  <><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></>
 );
 
 export const IconList = icon(
@@ -145,12 +184,16 @@ export const IconList = icon(
 /** Maps recovery_action to icon component */
 export const actionIcon = (action) => {
   const map = {
-    immediate_retry:       IconRefreshCw,
-    scheduled_retry_2days: IconClock,
-    sms_nudge:             IconActivity,
-    email_alt_payment:     IconMail,
-    escalate_human:        IconUser,
-    none:                  IconMoreHorizontal,
+    immediate_retry:        IconRefreshCw,
+    scheduled_retry_2days:  IconClock,
+    smart_payday_retry:     IconRepeat,
+    sms_nudge:              IconActivity,
+    email_alt_payment:      IconMail,
+    whatsapp_checkout_link: IconShoppingCart,
+    b2b_dunning_escalation: IconFileText,
+    hinglish_voice_call:    IconMic,
+    escalate_human:         IconUser,
+    none:                   IconMoreHorizontal,
   };
   return map[action] || IconMoreHorizontal;
 };
@@ -158,12 +201,18 @@ export const actionIcon = (action) => {
 /** Maps classified_reason to icon component */
 export const reasonIcon = (reason) => {
   const map = {
-    insufficient_funds: IconCreditCard,
-    card_expired:       IconCreditCard,
-    bank_timeout:       IconClock,
-    mandate_expired:    IconLock,
-    network_error:      IconWifi,
-    unknown:            IconAlertTriangle,
+    insufficient_funds:          IconCreditCard,
+    card_expired:                IconCreditCard,
+    bank_timeout:                IconClock,
+    mandate_expired:             IconLock,
+    network_error:               IconWifi,
+    checkout_hesitation:         IconShoppingCart,
+    otp_dropoff:                 IconActivity,
+    invoice_overdue_30d:         IconFileText,
+    invoice_overdue_60d:         IconFileText,
+    subscription_failed_billing: IconRepeat,
+    unknown:                     IconAlertTriangle,
   };
   return map[reason] || IconAlertTriangle;
 };
+

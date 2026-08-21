@@ -40,8 +40,7 @@ const TooltipContent = ({ active, payload, label }) => {
 };
 
 const SectionHeader = ({ children }) => (
-  <p className="text-2xs font-semibold uppercase tracking-wider mb-4"
-    style={{ color: 'var(--color-text-muted)' }}>
+  <p className="text-2xs font-bold uppercase tracking-wider text-slate-400 mb-4">
     {children}
   </p>
 );
@@ -49,9 +48,8 @@ const SectionHeader = ({ children }) => (
 const BreakdownChart = ({ breakdown }) => {
   if (!breakdown || Object.keys(breakdown).length === 0) {
     return (
-      <div className="card p-8 flex items-center justify-center text-sm"
-        style={{ color: 'var(--color-text-muted)', height: 240 }}>
-        No data — run the demo to see analytics
+      <div className="card p-12 flex items-center justify-center text-xs text-slate-400 h-64 bg-white border border-slate-200">
+        No ledger analytics available — run the demo to generate metrics.
       </div>
     );
   }
@@ -80,39 +78,38 @@ const BreakdownChart = ({ breakdown }) => {
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
       {/* Bar chart */}
-      <div className="card p-5">
-        <SectionHeader>Recovery Amount by Failure Type</SectionHeader>
-        <ResponsiveContainer width="100%" height={200}>
+      <div className="card p-5 bg-white border border-slate-200 shadow-xs">
+        <SectionHeader>Recovery Capital by Failure Diagnosis</SectionHeader>
+        <ResponsiveContainer width="100%" height={210}>
           <BarChart data={barData} margin={{ top: 0, right: 0, left: 8, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" vertical={false} />
-            <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
-            <YAxis tickFormatter={fmtINR} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+            <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
+            <YAxis tickFormatter={fmtINR} tick={{ fontSize: 10, fill: '#64748b' }} axisLine={false} tickLine={false} />
             <Tooltip content={<TooltipContent />} />
             <Bar dataKey="At Risk" fill="#f1f5f9" radius={[3,3,0,0]} />
             <Bar dataKey="Recovered" radius={[3,3,0,0]}>
               {barData.map((e, i) => (
-                <Cell key={i} fill={REASON_CONFIG[e.reason]?.color || '#1d4ed8'} />
+                <Cell key={i} fill={REASON_CONFIG[e.reason]?.color || '#2563eb'} />
               ))}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
-        <div className="flex items-center gap-4 mt-3 pt-3"
-          style={{ borderTop: '1px solid var(--color-border)' }}>
-          <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-            <div className="w-3 h-3 rounded-sm" style={{ background: '#f1f5f9', border: '1px solid #e2e8f0' }} />
-            At Risk
+        <div className="flex items-center gap-4 mt-3 pt-3 border-t border-slate-100">
+          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+            <div className="w-3 h-3 rounded-xs bg-slate-100 border border-slate-300" />
+            <span>Capital at Risk</span>
           </div>
-          <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-text-muted)' }}>
-            <div className="w-3 h-3 rounded-sm" style={{ background: '#1d4ed8' }} />
-            Recovered
+          <div className="flex items-center gap-1.5 text-xs text-slate-500">
+            <div className="w-3 h-3 rounded-xs bg-indigo-600" />
+            <span>Capital Recovered</span>
           </div>
         </div>
       </div>
 
       {/* Donut chart */}
-      <div className="card p-5">
-        <SectionHeader>Failure Type Distribution</SectionHeader>
-        <ResponsiveContainer width="100%" height={200}>
+      <div className="card p-5 bg-white border border-slate-200 shadow-xs">
+        <SectionHeader>Risk Stream Breakdown</SectionHeader>
+        <ResponsiveContainer width="100%" height={210}>
           <PieChart>
             <Pie
               data={donutData}
@@ -135,12 +132,12 @@ const BreakdownChart = ({ breakdown }) => {
                 border: '1px solid #e2e8f0',
                 borderRadius: '8px',
                 fontSize: '12px',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.06)',
               }}
             />
             <Legend
               formatter={(v) => <span style={{ color: '#475569', fontSize: '11px' }}>{v}</span>}
-              iconSize={10}
+              iconSize={8}
               iconType="circle"
             />
           </PieChart>
@@ -148,29 +145,27 @@ const BreakdownChart = ({ breakdown }) => {
       </div>
 
       {/* Recovery rate bars — full width */}
-      <div className="card p-5 xl:col-span-2">
-        <SectionHeader>Recovery Rate by Failure Reason</SectionHeader>
+      <div className="card p-5 xl:col-span-2 bg-white border border-slate-200 shadow-xs">
+        <SectionHeader>Recovery Conversion by Diagnostic Category</SectionHeader>
         <div className="space-y-3">
           {rateData.map(([reason, v]) => {
             const cfg = REASON_CONFIG[reason] || { label: reason, color: '#94a3b8' };
             return (
               <div key={reason} className="flex items-center gap-3">
-                <div className="w-24 text-xs flex-shrink-0 truncate" style={{ color: 'var(--color-text-secondary)' }}>
+                <div className="w-28 text-xs font-medium text-slate-700 flex-shrink-0 truncate">
                   {cfg.label}
                 </div>
-                <div className="flex-1 progress-track">
+                <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
                   <div
-                    className="progress-fill transition-all duration-700"
+                    className="h-full rounded-full transition-all duration-700"
                     style={{ width: `${v.recovery_rate}%`, background: cfg.color }}
                   />
                 </div>
-                <span className="w-10 text-right font-mono text-xs flex-shrink-0"
-                  style={{ color: 'var(--color-text-secondary)' }}>
+                <span className="w-12 text-right font-mono text-xs font-semibold text-slate-800 flex-shrink-0">
                   {v.recovery_rate}%
                 </span>
-                <span className="w-14 text-right text-xs flex-shrink-0"
-                  style={{ color: 'var(--color-text-muted)' }}>
-                  {v.recovered}/{v.total}
+                <span className="w-16 text-right text-2xs font-mono text-slate-400 flex-shrink-0">
+                  {v.recovered}/{v.total} txns
                 </span>
               </div>
             );

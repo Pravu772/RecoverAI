@@ -103,9 +103,10 @@ const BatchDemoButton = ({ onComplete, count = 50 }) => {
     try {
       const r = await advanceTime(2);
       onComplete?.();
-      alert(`Time advanced by 2 days.\nSimulated time: ${new Date(r.current_simulated_time).toLocaleString('en-IN')}`);
+      setMessage(`Simulated clock advanced +48 hours (Evaluating PTP & unlocks)`);
+      setTimeout(() => setMessage(''), 3500);
     } catch (e) {
-      alert(`Error: ${e.message}`);
+      setError(e.message);
     } finally {
       setAdvancingTime(false);
     }
@@ -114,17 +115,17 @@ const BatchDemoButton = ({ onComplete, count = 50 }) => {
   const allDone = Object.values(statuses).every(s => s === 'done');
 
   return (
-    <div className="card p-5 flex flex-col gap-4">
+    <div className="card p-5 flex flex-col gap-4 bg-white border border-slate-200 shadow-xs">
       {/* Title */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2.5">
           <img src="/logo-icon.png" alt="RecoverAI" className="w-6 h-6 object-contain rounded-md" />
           <div>
-            <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-              Autonomous Recovery Engine
+            <h3 className="text-sm font-bold text-slate-900">
+              Autonomous Recovery Pipeline
             </h3>
-            <p className="text-xs mt-0.5" style={{ color: 'var(--color-text-muted)' }}>
-              3-stage bounded pipeline execution
+            <p className="text-2xs text-slate-500 mt-0.5">
+              Deterministic routing & LLM bounded execution
             </p>
           </div>
         </div>
@@ -152,27 +153,24 @@ const BatchDemoButton = ({ onComplete, count = 50 }) => {
       {/* Status message */}
       {message && (
         <div
-          className="flex items-center gap-2 px-3 py-2 rounded-md text-xs"
-          style={{ background: '#eff6ff', border: '1px solid #bfdbfe', color: 'var(--color-accent)' }}
+          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs bg-blue-50 border border-blue-200 text-blue-800"
         >
-          <div className="spinner flex-shrink-0" style={{ color: 'var(--color-accent)', width: 12, height: 12 }} />
-          {message}
+          <div className="spinner flex-shrink-0 text-blue-700" style={{ width: 12, height: 12 }} />
+          <span>{message}</span>
         </div>
       )}
 
       {/* Error */}
       {error && (
-        <div className="px-3 py-2 rounded-md text-xs"
-          style={{ background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626' }}>
+        <div className="px-3 py-2 rounded-lg text-xs bg-rose-50 border border-rose-200 text-rose-800">
           {error}
         </div>
       )}
 
       {/* Success summary */}
       {result && !running && (
-        <div className="px-4 py-3 rounded-lg"
-          style={{ background: '#ecfdf5', border: '1px solid #a7f3d0' }}>
-          <p className="text-xs font-semibold mb-2" style={{ color: '#059669' }}>Run complete</p>
+        <div className="px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200">
+          <p className="text-xs font-bold mb-2 text-emerald-800">Execution Batch Complete</p>
           <div className="grid grid-cols-3 gap-2">
             {[
               { label: 'Processed', value: result.total_processed },
@@ -180,8 +178,8 @@ const BatchDemoButton = ({ onComplete, count = 50 }) => {
               { label: 'Rate',      value: `${result.recovery_rate}%` },
             ].map(stat => (
               <div key={stat.label}>
-                <p className="text-2xs" style={{ color: '#065f46' }}>{stat.label}</p>
-                <p className="text-sm font-bold" style={{ color: stat.accent ? '#059669' : '#065f46' }}>
+                <p className="text-2xs text-emerald-700 font-medium">{stat.label}</p>
+                <p className="text-sm font-bold font-mono text-emerald-900">
                   {stat.value}
                 </p>
               </div>
@@ -196,31 +194,31 @@ const BatchDemoButton = ({ onComplete, count = 50 }) => {
           id="btn-run-demo"
           onClick={runDemo}
           disabled={running}
-          className="btn-primary flex-1 justify-center"
+          className="btn-primary flex-1 justify-center text-xs"
         >
           {running ? (
-            <><div className="spinner" /><span>Running…</span></>
+            <><div className="spinner" /><span>Executing Pipeline…</span></>
           ) : (
-            <><IconPlay className="w-3.5 h-3.5" /><span>Run Full Demo</span></>
+            <><IconPlay className="w-3.5 h-3.5" /><span>Run Full Recovery Cycle</span></>
           )}
         </button>
         <button
           id="btn-advance-time"
           onClick={handleAdvanceTime}
           disabled={running || advancingTime}
-          className="btn-secondary"
-          title="Advance simulated time by 2 days to unlock scheduled retries"
+          className="btn-secondary text-xs"
+          title="Advance simulated clock by 2 days to test cooldown & evaluate PTP deadlines"
         >
           {advancingTime
             ? <div className="spinner" />
             : <IconFastForward className="w-3.5 h-3.5" />
           }
-          <span className="hidden sm:inline">+2 Days</span>
+          <span className="hidden sm:inline">+48h Clock</span>
         </button>
       </div>
 
-      <p className="text-2xs text-center" style={{ color: 'var(--color-text-muted)' }}>
-        Click any row to open audit trail — use +2 Days to unlock scheduled retries
+      <p className="text-2xs text-center text-slate-400">
+        Select any record to view audit provenance and trigger voice simulation
       </p>
     </div>
   );

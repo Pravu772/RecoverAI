@@ -1,21 +1,25 @@
 import { useEffect, useState, useRef } from 'react';
 import { getAuditTrail, getOrGenerateVoiceScript, setPromiseToPay, updatePTPStatus } from '../api/index.js';
-import { IconX, IconCheckCircle, IconAlertTriangle, IconZap, IconShield, IconActivity } from './Icons.jsx';
+import {
+  IconX, IconCheckCircle, IconAlertTriangle, IconZap, IconShield, IconActivity,
+  IconMic, IconCalendar, IconRepeat, IconPlay, IconPause, IconSquare,
+  IconCopy, IconCheck, IconVolume2, IconUser, IconLayers
+} from './Icons.jsx';
 
 const EVENT_CONFIG = {
-  classification:    { Icon: IconActivity, label: 'Classification',   dotColor: '#1d4ed8' },
-  recovery_action:   { Icon: IconZap,      label: 'Recovery Action',  dotColor: '#0891b2' },
-  outcome:           { Icon: IconCheckCircle, label: 'Outcome',       dotColor: '#059669' },
-  exception:         { Icon: IconAlertTriangle, label: 'Exception',   dotColor: '#d97706' },
-  constraint_blocked:{ Icon: IconShield,   label: 'Blocked',          dotColor: '#64748b' },
+  classification:     { Icon: IconActivity,      label: 'Classification',      dotColor: '#2563eb' },
+  recovery_action:    { Icon: IconZap,           label: 'Recovery Action',     dotColor: '#0891b2' },
+  outcome:            { Icon: IconCheckCircle,   label: 'Outcome',            dotColor: '#059669' },
+  exception:          { Icon: IconAlertTriangle, label: 'Exception Flagged',   dotColor: '#d97706' },
+  constraint_blocked: { Icon: IconShield,        label: 'Constraint Guard',    dotColor: '#64748b' },
 };
 
 const OUTCOME_STYLE = {
-  success: { color: '#059669', bg: '#ecfdf5' },
-  failure: { color: '#dc2626', bg: '#fef2f2' },
-  pending: { color: '#d97706', bg: '#fffbeb' },
-  skipped: { color: '#64748b', bg: '#f8fafc' },
-  blocked: { color: '#64748b', bg: '#f8fafc' },
+  success: { color: '#059669', bg: '#ecfdf5', border: '#a7f3d0' },
+  failure: { color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
+  pending: { color: '#d97706', bg: '#fffbeb', border: '#fde68a' },
+  skipped: { color: '#475569', bg: '#f8fafc', border: '#e2e8f0' },
+  blocked: { color: '#475569', bg: '#f8fafc', border: '#e2e8f0' },
 };
 
 const formatINR = (n) =>
@@ -26,39 +30,51 @@ const formatDate = (d) =>
     day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit',
   });
 
-const STATUS_META = {
-  failed:              'badge-failed',
-  recovered:           'badge-recovered',
-  exception:           'badge-exception',
-  action_taken:        'badge-action_taken',
-  max_retries_reached: 'badge-max_retries_reached',
-  pending_human:       'badge-pending_human',
-  opted_out:           'badge-opted_out',
-  classifying:         'badge-classifying',
-  ptp_committed:       'badge-action_taken',
-  ptp_broken:          'badge-exception',
+const STATUS_BADGE = {
+  failed:              'bg-rose-50 text-rose-700 border-rose-200',
+  recovered:           'bg-emerald-50 text-emerald-700 border-emerald-200',
+  exception:           'bg-amber-50 text-amber-700 border-amber-200',
+  action_taken:        'bg-blue-50 text-blue-700 border-blue-200',
+  max_retries_reached: 'bg-rose-50 text-rose-800 border-rose-200',
+  pending_human:       'bg-orange-50 text-orange-700 border-orange-200',
+  opted_out:           'bg-slate-100 text-slate-600 border-slate-200',
+  classifying:         'bg-purple-50 text-purple-700 border-purple-200',
+  ptp_committed:       'bg-indigo-50 text-indigo-700 border-indigo-200',
+  ptp_broken:          'bg-rose-100 text-rose-800 border-rose-300',
 };
 
 const AuditTrailDrawer = ({ transaction, onClose }) => {
   const [data, setData]             = useState(null);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState(null);
-  const [activeTab, setActiveTab]   = useState('timeline'); // 'timeline' | 'voice' | 'ptp' | 'mandate'
+  const [activeTab, setActiveTab]   = useState('timeline');
+  const [copied, setCopied]         = useState(false);
 
   // Voice AI State
   const [voiceScript, setVoiceScript] = useState(null);
   const [loadingVoice, setLoadingVoice] = useState(false);
   const [isPlaying, setIsPlaying]   = useState(false);
   const [activeTurnIdx, setActiveTurnIdx] = useState(-1);
-  const speechRef = useRef(null);
 
   // PTP Form State
   const [ptpDate, setPtpDate]       = useState(
     new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
   );
-  const [ptpNotes, setPtpNotes]     = useState('Customer confirmed payment on phone outreach');
+  const [ptpNotes, setPtpNotes]     = useState('Customer confirmed payment on telephone follow-up');
   const [ptpLoading, setPtpLoading] = useState(false);
   const [currentTxn, setCurrentTxn] = useState(transaction);
+
+  // Keyboard shortcut (Escape to close)
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        window.speechSynthesis?.cancel();
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   const fetchAudit = () => {
     if (!transaction) return;
@@ -80,7 +96,13 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
     }
   }, [transaction?.transaction_id]);
 
-  // Load Voice script on demand
+  const handleCopyId = () => {
+    navigator.clipboard.writeText(currentTxn.transaction_id);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 1500);
+  };
+
+  // Generate / Fetch Voice script
   const handleLoadVoiceScript = async () => {
     setLoadingVoice(true);
     try {
@@ -94,7 +116,7 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
     }
   };
 
-  // SpeechSynthesis Web Audio Player
+  // Web SpeechSynthesis Audio
   const handlePlayVoiceScript = () => {
     if (!voiceScript || !voiceScript.turns || voiceScript.turns.length === 0) return;
 
@@ -119,8 +141,7 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
       setActiveTurnIdx(index);
       const turn = voiceScript.turns[index];
       const utterance = new SpeechSynthesisUtterance(turn.text_hinglish || turn.text_english);
-      
-      // Try to find a natural English/Hindi voice
+
       const voices = window.speechSynthesis.getVoices();
       const inVoice = voices.find(v => v.lang.includes('hi') || v.lang.includes('IN') || v.name.includes('India'));
       if (inVoice) utterance.voice = inVoice;
@@ -129,12 +150,12 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
 
       utterance.onend = () => {
         index++;
-        setTimeout(playNextTurn, 600);
+        setTimeout(playNextTurn, 500);
       };
 
       utterance.onerror = () => {
         index++;
-        setTimeout(playNextTurn, 600);
+        setTimeout(playNextTurn, 500);
       };
 
       window.speechSynthesis.speak(utterance);
@@ -149,7 +170,6 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
     };
   }, []);
 
-  // Commit PTP
   const handleSavePTP = async () => {
     setPtpLoading(true);
     try {
@@ -185,121 +205,138 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
   return (
     <>
       <div className="drawer-overlay" onClick={() => { window.speechSynthesis?.cancel(); onClose(); }} />
-      <div className="drawer-panel flex flex-col h-full max-w-2xl bg-white shadow-2xl">
+      <div className="drawer-panel flex flex-col h-full max-w-2xl bg-white shadow-2xl border-l border-slate-200">
 
-        {/* Header */}
-        <div
-          className="sticky top-0 px-5 py-4 flex items-center justify-between gap-4 z-10 border-b"
-          style={{ background: 'var(--color-surface)', borderColor: 'var(--color-border)' }}
-        >
+        {/* Drawer Header */}
+        <div className="sticky top-0 px-6 py-4 flex items-center justify-between gap-4 z-10 bg-white border-b border-slate-200">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-200 flex items-center justify-center font-bold text-indigo-700 text-sm">
-              AI
+            <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700 font-mono text-xs font-bold">
+              ID
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-800">
-                  {currentTxn.customer_name || 'Customer'}
+                <span className="text-xs font-bold text-slate-900 truncate">
+                  {currentTxn.customer_name || 'Account'}
                 </span>
-                <span className="text-2xs px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 font-mono">
+                <span className="text-2xs text-slate-500 font-mono bg-slate-100 px-1.5 py-0.2 rounded border border-slate-200">
                   {currentTxn.customer_phone || '+91 9876543210'}
                 </span>
               </div>
-              <p className="font-mono text-2xs truncate text-indigo-600">
-                {currentTxn.transaction_id}
-              </p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="font-mono text-2xs text-slate-400 truncate">
+                  {currentTxn.transaction_id}
+                </span>
+                <button
+                  onClick={handleCopyId}
+                  className="text-slate-400 hover:text-slate-700 transition-colors"
+                  title="Copy ID"
+                >
+                  {copied ? <IconCheck className="w-3 h-3 text-emerald-600" /> : <IconCopy className="w-3 h-3" />}
+                </button>
+              </div>
             </div>
           </div>
-          <button
-            id="close-audit-drawer"
-            onClick={() => { window.speechSynthesis?.cancel(); onClose(); }}
-            className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
-          >
-            <IconX className="w-5 h-5" />
-          </button>
+
+          <div className="flex items-center gap-2">
+            <kbd className="hidden sm:inline-block px-1.5 py-0.5 text-2xs font-mono text-slate-400 bg-slate-100 border border-slate-200 rounded">
+              Esc
+            </kbd>
+            <button
+              id="close-audit-drawer"
+              onClick={() => { window.speechSynthesis?.cancel(); onClose(); }}
+              className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+            >
+              <IconX className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
-        {/* Top summary row */}
-        <div className="px-5 py-3.5 bg-slate-50 border-b border-slate-200">
-          <div className="grid grid-cols-3 gap-3">
+        {/* Overview Banner */}
+        <div className="px-6 py-4 bg-slate-50/80 border-b border-slate-200">
+          <div className="grid grid-cols-3 gap-4">
             <div>
-              <p className="text-2xs font-medium text-slate-500 uppercase tracking-wide">Amount at Risk</p>
-              <p className="text-base font-bold text-slate-900">{formatINR(currentTxn.amount)}</p>
+              <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500">Amount at Risk</p>
+              <p className="text-lg font-bold font-mono text-slate-900 mt-0.5">{formatINR(currentTxn.amount)}</p>
             </div>
             <div>
-              <p className="text-2xs font-medium text-slate-500 uppercase tracking-wide">Status</p>
-              <span className={`badge ${STATUS_META[currentTxn.status] || ''} mt-0.5 inline-block`}>
+              <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500">Current Status</p>
+              <span className={`inline-flex text-2xs font-semibold px-2 py-0.5 rounded-full border mt-1 ${STATUS_BADGE[currentTxn.status] || ''}`}>
                 {currentTxn.status?.replace(/_/g, ' ')}
               </span>
             </div>
             <div>
-              <p className="text-2xs font-medium text-slate-500 uppercase tracking-wide">Stream</p>
-              <span className="text-xs font-semibold text-indigo-700 capitalize">
+              <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500">Revenue Stream</p>
+              <p className="text-xs font-semibold text-indigo-700 capitalize mt-1">
                 {currentTxn.revenue_stream?.replace(/_/g, ' ')}
-              </span>
+              </p>
             </div>
           </div>
 
           {currentTxn.cart_summary && (
-            <div className="mt-2.5 px-3 py-1.5 rounded bg-orange-50 border border-orange-200 text-2xs text-orange-800">
-              <strong>🛒 Abandoned Cart:</strong> {currentTxn.cart_summary}
+            <div className="mt-3 p-2.5 rounded-lg bg-orange-50/70 border border-orange-200 text-xs text-orange-900">
+              <span className="font-semibold text-orange-950">Cart Contents:</span> {currentTxn.cart_summary}
             </div>
           )}
           {currentTxn.invoice_id && (
-            <div className="mt-2.5 px-3 py-1.5 rounded bg-teal-50 border border-teal-200 text-2xs text-teal-800">
-              <strong>📄 Invoice:</strong> {currentTxn.invoice_id} ({currentTxn.invoice_aging_days} days overdue)
+            <div className="mt-3 p-2.5 rounded-lg bg-teal-50/70 border border-teal-200 text-xs text-teal-900">
+              <span className="font-semibold text-teal-950">Invoice Reference:</span> {currentTxn.invoice_id} ({currentTxn.invoice_aging_days} days overdue)
             </div>
           )}
         </div>
 
-        {/* Feature Tabs */}
-        <div className="flex border-b border-slate-200 bg-white px-5 pt-2 gap-2">
+        {/* Tab Navigation */}
+        <div className="flex border-b border-slate-200 bg-white px-6 gap-6">
           {[
-            { id: 'timeline', label: '📜 Audit Trail' },
-            { id: 'voice',    label: '🎙️ Hinglish Voice AI' },
-            { id: 'ptp',      label: '🤝 Promise-to-Pay' },
-            { id: 'mandate',  label: '🔄 Mandate Sequencer' },
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`pb-2.5 px-2 text-xs font-semibold border-b-2 transition-all ${
-                activeTab === tab.id
-                  ? 'border-indigo-600 text-indigo-600'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+            { id: 'timeline', label: 'Decision Provenance', Icon: IconActivity },
+            { id: 'voice',    label: 'Voice Recovery AI',   Icon: IconMic },
+            { id: 'ptp',      label: 'PTP Lifecycle',       Icon: IconCalendar },
+            { id: 'mandate',  label: 'Mandate Sequencer',   Icon: IconRepeat },
+          ].map(tab => {
+            const { Icon } = tab;
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex items-center gap-2 py-3 text-xs font-semibold border-b-2 transition-all ${
+                  isActive
+                    ? 'border-indigo-600 text-indigo-700'
+                    : 'border-transparent text-slate-500 hover:text-slate-800'
+                }`}
+              >
+                <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-indigo-600' : 'text-slate-400'}`} />
+                <span>{tab.label}</span>
+              </button>
+            );
+          })}
         </div>
 
-        {/* Tab Content Body */}
-        <div className="flex-1 overflow-y-auto p-5">
+        {/* Drawer Body */}
+        <div className="flex-1 overflow-y-auto p-6">
 
-          {/* 1. TIMELINE TAB */}
+          {/* 1. DECISION PROVENANCE / TIMELINE */}
           {activeTab === 'timeline' && (
             <div>
               <div className="flex items-center justify-between mb-4">
                 <p className="text-2xs font-bold uppercase tracking-wider text-slate-400">
-                  Immutable Decision Log
+                  Immutable Decision Trail
                 </p>
-                <span className="text-2xs text-slate-400">
-                  {data?.audit_trail?.length || 0} events recorded
+                <span className="text-2xs font-mono text-slate-400">
+                  {data?.audit_trail?.length || 0} logged events
                 </span>
               </div>
 
               {loading && (
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {[...Array(3)].map((_, i) => (
-                    <div key={i} className="skeleton h-16 w-full rounded-lg" />
+                    <div key={i} className="skeleton h-16 w-full rounded-xl" />
                   ))}
                 </div>
               )}
 
               {error && (
-                <div className="px-3 py-3 rounded-lg text-sm bg-red-50 border border-red-200 text-red-700">
-                  Failed to load audit trail: {error}
+                <div className="p-3 rounded-lg text-xs bg-red-50 border border-red-200 text-red-700">
+                  Failed to load audit provenance: {error}
                 </div>
               )}
 
@@ -313,8 +350,8 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
                     return (
                       <div key={entry._id || idx} className="timeline-item">
                         <div className="timeline-dot" style={{ borderColor: cfg.dotColor, background: '#fff' }} />
-                        <div className="card p-3 card-hover border border-slate-200 shadow-sm rounded-xl">
-                          <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="p-3.5 rounded-xl border border-slate-200/90 bg-white shadow-xs hover:border-slate-300 transition-colors">
+                          <div className="flex items-center justify-between gap-2 mb-1.5">
                             <div className="flex items-center gap-1.5">
                               <Icon className="w-3.5 h-3.5 flex-shrink-0" style={{ color: cfg.dotColor }} />
                               <span className="text-xs font-bold text-slate-800">{cfg.label}</span>
@@ -322,8 +359,10 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
                                 <span className="code-chip text-2xs">{entry.action_taken}</span>
                               )}
                             </div>
-                            <span className="text-2xs font-semibold px-2 py-0.5 rounded-full"
-                              style={{ background: outStyle.bg, color: outStyle.color }}>
+                            <span
+                              className="text-2xs font-semibold px-2 py-0.5 rounded-full border"
+                              style={{ background: outStyle.bg, color: outStyle.color, borderColor: outStyle.border }}
+                            >
                               {entry.outcome}
                             </span>
                           </div>
@@ -331,10 +370,10 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
                           <div className="flex items-center gap-3 mt-2.5 pt-2 border-t border-slate-100">
                             {entry.confidence_score !== null && entry.confidence_score !== undefined && (
                               <span className="text-2xs text-slate-400">
-                                Confidence: <strong className="text-slate-700">{Math.round(entry.confidence_score * 100)}%</strong>
+                                Confidence: <strong className="text-slate-700 font-mono">{Math.round(entry.confidence_score * 100)}%</strong>
                               </span>
                             )}
-                            <span className="ml-auto text-2xs text-slate-400">{formatDate(entry.timestamp)}</span>
+                            <span className="ml-auto text-2xs font-mono text-slate-400">{formatDate(entry.timestamp)}</span>
                           </div>
                         </div>
                       </div>
@@ -345,80 +384,82 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
             </div>
           )}
 
-          {/* 2. HINGLISH VOICE RECOVERY TAB */}
+          {/* 2. VOICE RECOVERY AI TAB */}
           {activeTab === 'voice' && (
-            <div className="space-y-4">
-              <div className="bg-gradient-to-r from-indigo-900 to-slate-900 rounded-2xl p-5 text-white shadow-lg">
+            <div className="space-y-5">
+              {/* Voice Agent Control Card (Light Modern Theme) */}
+              <div className="rounded-xl p-5 bg-gradient-to-br from-slate-50 to-indigo-50/40 border border-slate-200 shadow-xs">
                 <div className="flex items-start justify-between">
                   <div>
-                    <span className="text-2xs uppercase tracking-widest px-2 py-0.5 bg-indigo-500/30 text-indigo-300 rounded font-semibold">
+                    <span className="text-2xs uppercase tracking-widest px-2 py-0.5 bg-indigo-100 text-indigo-700 rounded font-semibold border border-indigo-200">
                       Autonomous Hinglish Agent
                     </span>
-                    <h3 className="text-lg font-bold mt-1 text-white flex items-center gap-2">
-                      Voice Recovery Simulation
+                    <h3 className="text-sm font-bold mt-1.5 text-slate-900">
+                      Vernacular Outbound Recovery
                     </h3>
-                    <p className="text-xs text-slate-300 mt-0.5">
-                      Empathetic vernacular outreach with automated PTP capture
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Empathetic conversational outreach with automated PTP capture
                     </p>
                   </div>
-                  <div className="w-10 h-10 rounded-full bg-indigo-500/20 border border-indigo-400/30 flex items-center justify-center text-xl">
-                    🎙️
+                  <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center">
+                    <IconVolume2 className="w-4 h-4" />
                   </div>
                 </div>
 
-                {/* Animated Waveform Visualizer */}
-                <div className="my-5 py-3 px-4 bg-black/40 rounded-xl border border-white/10 flex items-center justify-between gap-1">
-                  {[40, 65, 25, 90, 45, 80, 60, 100, 35, 75, 50, 95, 30, 85, 40, 70, 55, 90].map((h, i) => (
+                {/* Animated Frequency Waveform (Light Theme) */}
+                <div className="my-4 py-3 px-4 bg-white rounded-lg border border-slate-200/80 flex items-center justify-between gap-1.5 shadow-2xs">
+                  {[35, 60, 20, 85, 40, 75, 55, 95, 30, 70, 45, 90, 25, 80, 35, 65, 50, 85].map((h, i) => (
                     <div
                       key={i}
-                      className={`w-1.5 rounded-full transition-all duration-300 ${
-                        isPlaying ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'
+                      className={`w-1 rounded-full transition-all duration-200 ${
+                        isPlaying ? 'bg-indigo-600' : 'bg-slate-200'
                       }`}
                       style={{
-                        height: isPlaying ? `${Math.max(12, (h * ((i % 3) + 1)) % 38)}px` : '8px',
-                        animationDelay: `${i * 70}ms`,
+                        height: isPlaying ? `${Math.max(10, (h * ((i % 3) + 1)) % 32)}px` : '6px',
                       }}
                     />
                   ))}
                 </div>
 
-                {/* Audio Controls */}
-                <div className="flex items-center justify-between pt-2">
-                  <div className="text-2xs text-slate-300 font-mono">
-                    {isPlaying ? '🔴 Call in Progress (SpeechSynthesis Active)' : '⏸️ Standby — Ready to Dial'}
-                  </div>
+                {/* Controls */}
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-2xs text-slate-500 font-mono">
+                    {isPlaying ? 'Call Active (SpeechSynthesis)' : 'Ready for Dispatch'}
+                  </span>
 
                   {!voiceScript ? (
                     <button
                       onClick={handleLoadVoiceScript}
                       disabled={loadingVoice}
-                      className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-all shadow-md flex items-center gap-2"
+                      className="btn-primary text-xs"
                     >
-                      {loadingVoice ? 'Generating AI Script…' : 'Generate Hinglish Call Script'}
+                      <IconMic className="w-3.5 h-3.5" />
+                      <span>{loadingVoice ? 'Synthesizing...' : 'Generate Voice Script'}</span>
                     </button>
                   ) : (
                     <button
                       onClick={handlePlayVoiceScript}
-                      className={`px-5 py-2.5 rounded-xl text-xs font-bold transition-all shadow-md flex items-center gap-2 ${
+                      className={`btn-primary text-xs ${
                         isPlaying
-                          ? 'bg-rose-600 hover:bg-rose-500 text-white'
-                          : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                          ? 'bg-rose-600 hover:bg-rose-700'
+                          : 'bg-indigo-600 hover:bg-indigo-700'
                       }`}
                     >
-                      {isPlaying ? '⏹️ Stop Call Audio' : '▶️ Play Live Voice Call'}
+                      {isPlaying ? <IconSquare className="w-3.5 h-3.5" /> : <IconPlay className="w-3.5 h-3.5" />}
+                      <span>{isPlaying ? 'Stop Call' : 'Play Live Voice Call'}</span>
                     </button>
                   )}
                 </div>
               </div>
 
-              {/* Call Transcript */}
+              {/* Dialogue Transcript */}
               {voiceScript && (
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
                     <p className="text-xs font-bold text-slate-700 uppercase tracking-wide">
-                      Live Call Transcript & Psychology
+                      Conversation Transcript
                     </p>
-                    <span className="text-2xs px-2 py-0.5 rounded bg-slate-100 text-slate-600">
+                    <span className="text-2xs font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600 border border-slate-200">
                       Language: {voiceScript.language || 'Hinglish'}
                     </span>
                   </div>
@@ -431,23 +472,25 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
                       return (
                         <div
                           key={i}
-                          className={`p-3.5 rounded-xl border transition-all ${
+                          className={`p-3.5 rounded-xl border transition-all duration-150 ${
                             isAgent
-                              ? 'bg-indigo-50/70 border-indigo-100 mr-6'
-                              : 'bg-emerald-50/70 border-emerald-100 ml-6'
-                          } ${isActive ? 'ring-2 ring-indigo-500 shadow-md' : ''}`}
+                              ? 'bg-indigo-50/60 border-indigo-100 mr-6'
+                              : 'bg-emerald-50/60 border-emerald-100 ml-6'
+                          } ${isActive ? 'ring-2 ring-indigo-500 shadow-xs' : ''}`}
                         >
-                          <div className="flex items-center justify-between mb-1.5">
+                          <div className="flex items-center justify-between mb-1">
                             <span
-                              className={`text-2xs font-bold px-2 py-0.5 rounded-full ${
-                                isAgent ? 'bg-indigo-600 text-white' : 'bg-emerald-600 text-white'
+                              className={`text-2xs font-bold px-2 py-0.2 rounded ${
+                                isAgent
+                                  ? 'bg-indigo-600 text-white'
+                                  : 'bg-emerald-600 text-white'
                               }`}
                             >
-                              {isAgent ? '🤖 Aarav (RecoverAI Agent)' : `👤 ${currentTxn.customer_name || 'Customer'}`}
+                              {isAgent ? 'Aarav (AI Agent)' : (currentTxn.customer_name || 'Customer')}
                             </span>
                             {isActive && (
-                              <span className="text-2xs font-bold text-indigo-600 animate-pulse">
-                                🔊 Speaking Now…
+                              <span className="text-2xs font-bold text-indigo-600">
+                                Speaking...
                               </span>
                             )}
                           </div>
@@ -455,28 +498,29 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
                             "{turn.text_hinglish}"
                           </p>
                           <p className="text-2xs text-slate-500 mt-1 italic">
-                            EN: "{turn.text_english}"
+                            Translation: "{turn.text_english}"
                           </p>
                         </div>
                       );
                     })}
                   </div>
 
-                  {/* Quick PTP commit from Call Outcome */}
-                  <div className="p-4 bg-purple-50 border border-purple-200 rounded-xl flex items-center justify-between gap-4">
+                  {/* Direct PTP Commit Callout */}
+                  <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-between gap-4">
                     <div>
-                      <p className="text-xs font-bold text-purple-900">
-                        Customer Agreed to Pay Later?
+                      <p className="text-xs font-bold text-slate-800">
+                        Customer Agreed to Pay?
                       </p>
-                      <p className="text-2xs text-purple-700">
-                        Lock in the commitment with the Promise-to-Pay (PTP) engine.
+                      <p className="text-2xs text-slate-500">
+                        Lock in the commitment with the Promise-to-Pay (PTP) tracker.
                       </p>
                     </div>
                     <button
                       onClick={() => setActiveTab('ptp')}
-                      className="px-3 py-1.5 rounded-lg bg-purple-700 hover:bg-purple-800 text-white text-xs font-bold shadow-sm"
+                      className="btn-secondary text-xs"
                     >
-                      Log PTP Commitment →
+                      <span>Log PTP</span>
+                      <IconCalendar className="w-3.5 h-3.5 text-indigo-600" />
                     </button>
                   </div>
                 </div>
@@ -486,33 +530,29 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
 
           {/* 3. PROMISE-TO-PAY (PTP) TAB */}
           {activeTab === 'ptp' && (
-            <div className="space-y-5">
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
-                <h4 className="text-sm font-bold text-slate-800 mb-1 flex items-center gap-2">
-                  <span>🤝</span> Promise-to-Pay (PTP) Lifecycle Tracker
+            <div className="space-y-4">
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                  Promise-to-Pay Protocol
                 </h4>
-                <p className="text-xs text-slate-600">
-                  Track payment commitments, enforce automated cooldowns, and evaluate deadlines against the simulated clock.
+                <p className="text-xs text-slate-600 mt-0.5">
+                  Track customer payment commitments and enforce automated cooldowns against the clock.
                 </p>
               </div>
 
-              {/* Current PTP Status */}
-              <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-3 shadow-sm">
+              {/* Status card */}
+              <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-3 shadow-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-slate-500">Current PTP Status:</span>
-                  <span className={`badge ${
-                    currentTxn.ptp_status === 'committed' ? 'badge-action_taken' :
-                    currentTxn.ptp_status === 'kept' ? 'badge-recovered' :
-                    currentTxn.ptp_status === 'broken' ? 'badge-exception' : 'badge-failed'
-                  }`}>
+                  <span className="text-xs font-semibold text-slate-500">Commitment Status:</span>
+                  <span className={`text-2xs font-semibold px-2 py-0.5 rounded-full border ${STATUS_BADGE[currentTxn.status] || ''}`}>
                     {currentTxn.ptp_status?.toUpperCase() || 'NONE'}
                   </span>
                 </div>
 
                 {currentTxn.ptp_date && (
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-slate-500">Promised Due Date:</span>
-                    <span className="font-semibold text-slate-800">
+                  <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-100">
+                    <span className="text-slate-500">Target Date:</span>
+                    <span className="font-semibold font-mono text-slate-800">
                       {new Date(currentTxn.ptp_date).toLocaleDateString('en-IN', {
                         weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
                       })}
@@ -521,118 +561,119 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
                 )}
 
                 {currentTxn.ptp_notes && (
-                  <div className="text-2xs text-slate-600 bg-slate-50 p-2.5 rounded-lg border border-slate-200">
+                  <div className="text-2xs text-slate-600 bg-slate-50 p-2.5 rounded border border-slate-200">
                     <strong>Notes:</strong> {currentTxn.ptp_notes}
                   </div>
                 )}
 
-                {/* Status action buttons */}
                 {currentTxn.ptp_status === 'committed' && (
                   <div className="flex gap-2 pt-2">
                     <button
                       onClick={() => handleUpdatePTPStatus('kept')}
                       disabled={ptpLoading}
-                      className="flex-1 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold"
+                      className="btn-primary flex-1 justify-center bg-emerald-600 hover:bg-emerald-700 text-xs"
                     >
-                      ✅ Mark Promise Kept (Recovered)
+                      <IconCheckCircle className="w-3.5 h-3.5" />
+                      <span>Mark Kept</span>
                     </button>
                     <button
                       onClick={() => handleUpdatePTPStatus('broken')}
                       disabled={ptpLoading}
-                      className="flex-1 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold"
+                      className="btn-primary flex-1 justify-center bg-rose-600 hover:bg-rose-700 text-xs"
                     >
-                      ⚠️ Mark Broken (Escalate)
+                      <IconXCircle className="w-3.5 h-3.5" />
+                      <span>Mark Broken</span>
                     </button>
                   </div>
                 )}
               </div>
 
-              {/* Set / Reschedule PTP Form */}
-              <div className="p-4 rounded-xl border border-indigo-100 bg-indigo-50/50 space-y-3">
-                <p className="text-xs font-bold text-indigo-900">
-                  {currentTxn.ptp_status === 'committed' ? 'Reschedule Commitment' : 'Register New Commitment'}
+              {/* Form */}
+              <div className="p-4 rounded-xl border border-indigo-100 bg-indigo-50/40 space-y-3">
+                <p className="text-xs font-bold text-indigo-950">
+                  {currentTxn.ptp_status === 'committed' ? 'Reschedule Commitment' : 'Register Payment Commitment'}
                 </p>
 
                 <div>
                   <label className="block text-2xs font-semibold text-slate-600 mb-1">
-                    Promised Payment Date:
+                    Promised Payment Due Date
                   </label>
                   <input
                     type="date"
                     value={ptpDate}
                     onChange={e => setPtpDate(e.target.value)}
-                    className="input w-full bg-white text-xs"
+                    className="input text-xs bg-white"
                   />
                 </div>
 
                 <div>
                   <label className="block text-2xs font-semibold text-slate-600 mb-1">
-                    Commitment Notes:
+                    Follow-up Notes
                   </label>
                   <input
                     type="text"
                     value={ptpNotes}
                     onChange={e => setPtpNotes(e.target.value)}
-                    placeholder="e.g. Customer promised to pay after salary deposit on Friday"
-                    className="input w-full bg-white text-xs"
+                    placeholder="e.g. Customer promised settlement post-salary on Friday"
+                    className="input text-xs bg-white"
                   />
                 </div>
 
                 <button
                   onClick={handleSavePTP}
                   disabled={ptpLoading}
-                  className="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold transition-all shadow"
+                  className="btn-primary w-full justify-center text-xs"
                 >
-                  {ptpLoading ? 'Saving Commitment…' : 'Save Promise-to-Pay Commitment'}
+                  <IconCalendar className="w-3.5 h-3.5" />
+                  <span>{ptpLoading ? 'Saving...' : 'Commit Promise-to-Pay Date'}</span>
                 </button>
               </div>
             </div>
           )}
 
-          {/* 4. MANDATE RETRY SEQUENCER TAB */}
+          {/* 4. MANDATE RETRY SEQUENCER */}
           {activeTab === 'mandate' && (
             <div className="space-y-4">
-              <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl">
-                <h4 className="text-sm font-bold text-slate-800 mb-1 flex items-center gap-2">
-                  <span>🔄</span> Smart Mandate Retry Sequencer
+              <div className="p-4 bg-slate-50 border border-slate-200 rounded-xl">
+                <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wide">
+                  Smart Mandate Retry Sequence
                 </h4>
-                <p className="text-xs text-slate-600">
-                  Automated NACH & recurring card mandate re-presentation sequence synchronized with Indian bank uptime and salary cycles.
+                <p className="text-xs text-slate-600 mt-0.5">
+                  Automated NACH & recurring card retry stages aligned with bank uptime and salary cycles.
                 </p>
               </div>
 
-              {/* Sequence Stages */}
               <div className="space-y-3">
                 {[
                   {
                     step: 1,
-                    title: 'Stage 1: Transient Gateway Retry',
-                    time: 'Instant (0 to 15 mins)',
-                    desc: 'Safe immediate retry for network drops and transient bank NPCI timeouts.',
+                    title: 'Stage 1: Immediate Gateway Retry',
+                    time: '0 to 15 mins',
+                    desc: 'Transient check for gateway connection timeouts and momentary drops.',
                     status: currentTxn.attempt_count >= 1 ? 'Executed' : 'Pending',
                     active: currentTxn.attempt_count === 0,
                   },
                   {
                     step: 2,
-                    title: 'Stage 2: Payday / Balance Sync Retry',
-                    time: '1st / 5th of Month or 2-Day Cooldown',
-                    desc: 'Scheduled re-presentation when customer balance is statistically highest.',
+                    title: 'Stage 2: Payday / Liquidity Alignment',
+                    time: '1st or 5th of Month / 2-Day Cooldown',
+                    desc: 'Re-presentation scheduled when customer liquidity is statistically peak.',
                     status: currentTxn.attempt_count >= 2 ? 'Executed' : currentTxn.attempt_count === 1 ? 'In Cooldown' : 'Queued',
                     active: currentTxn.attempt_count === 1,
                   },
                   {
                     step: 3,
-                    title: 'Stage 3: Multi-Channel Fallback Link',
-                    time: 'Day 5',
-                    desc: 'Automated WhatsApp & Email delivery of alternative 1-click UPI / Netbanking link.',
+                    title: 'Stage 3: Multi-Channel Alternative Link',
+                    time: 'Day 5 Post-Failure',
+                    desc: 'Automated 1-click alternative UPI/Card checkout link dispatched via WhatsApp & Email.',
                     status: currentTxn.attempt_count >= 3 ? 'Executed' : 'Queued',
                     active: currentTxn.attempt_count === 2,
                   },
                   {
                     step: 4,
-                    title: 'Stage 4: Compliant Human Collections Escalation',
-                    time: 'After Max Attempts',
-                    desc: 'Stops automated debits to prevent customer penalty fees and routes to agent.',
+                    title: 'Stage 4: Compliant Escalation Stop',
+                    time: 'Max 3 Attempts Reached',
+                    desc: 'Hard bounded stop to protect customer credit rating; routes to human collections agent.',
                     status: currentTxn.status === 'max_retries_reached' || currentTxn.status === 'pending_human' ? 'Active' : 'Standby',
                     active: currentTxn.attempt_count >= 3,
                   },
@@ -641,23 +682,23 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
                     key={stage.step}
                     className={`p-4 rounded-xl border transition-all ${
                       stage.active
-                        ? 'border-indigo-500 bg-indigo-50/50 shadow-sm'
+                        ? 'border-indigo-400 bg-indigo-50/40 shadow-xs'
                         : 'border-slate-200 bg-white'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-2">
-                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-2xs font-bold ${
+                        <span className={`w-5 h-5 rounded-full flex items-center justify-center text-2xs font-mono font-bold ${
                           stage.active ? 'bg-indigo-600 text-white' : 'bg-slate-200 text-slate-700'
                         }`}>
                           {stage.step}
                         </span>
-                        <span className="text-xs font-bold text-slate-800">{stage.title}</span>
+                        <span className="text-xs font-bold text-slate-900">{stage.title}</span>
                       </div>
-                      <span className={`text-2xs font-semibold px-2 py-0.5 rounded-full ${
-                        stage.status === 'Executed' ? 'bg-emerald-100 text-emerald-800' :
-                        stage.status === 'In Cooldown' ? 'bg-amber-100 text-amber-800' :
-                        stage.status === 'Active' ? 'bg-rose-100 text-rose-800' : 'bg-slate-100 text-slate-600'
+                      <span className={`text-2xs font-semibold px-2 py-0.5 rounded-full border ${
+                        stage.status === 'Executed' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' :
+                        stage.status === 'In Cooldown' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                        stage.status === 'Active' ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-slate-100 text-slate-600 border-slate-200'
                       }`}>
                         {stage.status}
                       </span>
@@ -676,4 +717,5 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
 };
 
 export default AuditTrailDrawer;
+
 

@@ -100,8 +100,8 @@ const SummaryCards = ({ summary, isLoading }) => {
       <MetricCard
         label="PTP Commitments"
         value={s.ptp_committed_amount || 0}
-        sub={`${s.ptp_committed_count || 0} promised payments`}
-        Icon={IconCheckCircle}
+        sub={`${s.ptp_committed_count || 0} promised accounts`}
+        Icon={IconCalendar}
         accentColor="#7c3aed"
         isCurrency
         isLoading={isLoading}

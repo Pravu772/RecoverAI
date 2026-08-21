@@ -6,12 +6,24 @@ import AuditTrailDrawer from '../components/AuditTrailDrawer.jsx';
 import ExceptionsPanel  from '../components/ExceptionsPanel.jsx';
 import BatchDemoButton  from '../components/BatchDemoButton.jsx';
 import BreakdownChart   from '../components/BreakdownChart.jsx';
-import { IconRefreshCw, IconList, IconAlertTriangle, IconBarChart2, IconActivity, IconShield } from '../components/Icons.jsx';
+import {
+  IconRefreshCw, IconList, IconAlertTriangle, IconBarChart2,
+  IconZap, IconShoppingCart, IconRepeat, IconFileText, IconCalendar, IconLayers
+} from '../components/Icons.jsx';
 
 const TABS = [
-  { id: 'transactions', label: 'Transactions', Icon: IconList },
-  { id: 'exceptions',   label: 'Exceptions',   Icon: IconAlertTriangle },
-  { id: 'analytics',    label: 'Analytics',    Icon: IconBarChart2 },
+  { id: 'transactions', label: 'Transactions Ledger', Icon: IconList },
+  { id: 'exceptions',   label: 'Exception Queue',     Icon: IconAlertTriangle },
+  { id: 'analytics',    label: 'Revenue Analytics',   Icon: IconBarChart2 },
+];
+
+const STREAM_FILTERS = [
+  { id: 'all',                  label: 'All Streams',          Icon: IconLayers },
+  { id: 'payment_gateway',      label: 'Gateway Failures',     Icon: IconZap },
+  { id: 'checkout_abandonment', label: 'Checkout Drop-offs',   Icon: IconShoppingCart },
+  { id: 'subscription_renewal', label: 'Subscription Mandates', Icon: IconRepeat },
+  { id: 'b2b_invoice',          label: 'B2B Receivables',      Icon: IconFileText },
+  { id: 'ptp',                  label: 'PTP Commitments',      Icon: IconCalendar },
 ];
 
 const Dashboard = () => {
@@ -46,40 +58,37 @@ const Dashboard = () => {
   useEffect(() => { refresh(); }, [refresh]);
 
   const exceptionCount = transactions.filter(t =>
-    ['exception', 'max_retries_reached', 'pending_human', 'opted_out'].includes(t.status)
+    ['exception', 'max_retries_reached', 'pending_human', 'opted_out', 'ptp_broken'].includes(t.status)
   ).length;
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
+    <div className="min-h-screen bg-slate-50 text-slate-900 font-sans antialiased selection:bg-indigo-100 selection:text-indigo-900">
 
-      {/* ── Top nav ─────────────────────────────────────────────────────────── */}
-      <header
-        className="sticky top-0 z-30"
-        style={{
-          background: 'var(--color-surface)',
-          borderBottom: '1px solid var(--color-border)',
-          boxShadow: 'var(--shadow-xs)',
-        }}
-      >
-        <div className="max-w-[1440px] mx-auto px-6 h-14 flex items-center justify-between gap-6">
+      {/* ── Top Navigation Bar ─────────────────────────────────────────────── */}
+      <header className="sticky top-0 z-30 bg-white border-b border-slate-200 shadow-xs">
+        <div className="max-w-[1440px] mx-auto px-6 h-15 flex items-center justify-between gap-6">
 
-          {/* Brand */}
-          <div className="flex items-center gap-3 flex-shrink-0 cursor-pointer" onClick={() => setActiveTab('transactions')}>
+          {/* Brand & Product Identifier */}
+          <div
+            className="flex items-center gap-3.5 flex-shrink-0 cursor-pointer"
+            onClick={() => { setSelectedStream('all'); setActiveTab('transactions'); }}
+          >
             <img
               src="/logo-brand.png"
               alt="RecoverAI"
               className="h-7 w-auto object-contain"
             />
-            <span
-              className="text-2xs font-medium px-2 py-0.5 rounded-full hidden md:inline-flex"
-              style={{ background: 'var(--color-accent-light)', color: 'var(--color-accent)' }}
-            >
-              Revenue Recovery
-            </span>
+            <div className="h-4 w-px bg-slate-200 hidden sm:block" />
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="text-2xs font-semibold uppercase tracking-wider text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
+                Autonomous Revenue Recovery
+              </span>
+              <span className="text-2xs text-slate-400 font-mono">v1.4.0-prod</span>
+            </div>
           </div>
 
-          {/* Center tabs */}
-          <nav className="flex items-center gap-0.5">
+          {/* Primary View Tabs */}
+          <nav className="flex items-center p-1 bg-slate-100/80 rounded-lg border border-slate-200/60">
             {TABS.map(tab => {
               const { Icon } = tab;
               const isActive = activeTab === tab.id;
@@ -91,23 +100,21 @@ const Dashboard = () => {
                   key={tab.id}
                   id={`tab-${tab.id}`}
                   onClick={() => setActiveTab(tab.id)}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all"
-                  style={{
-                    color:  isActive ? 'var(--color-accent)' : 'var(--color-text-secondary)',
-                    background: isActive ? 'var(--color-accent-light)' : 'transparent',
-                  }}
-                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--color-bg)'; }}
-                  onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                  className={`flex items-center gap-2 px-3.5 py-1.5 rounded-md text-xs font-semibold transition-all duration-150 ${
+                    isActive
+                      ? 'bg-white text-indigo-700 shadow-xs'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/50'
+                  }`}
                 >
-                  <Icon className="w-3.5 h-3.5" />
-                  {tab.label}
+                  <Icon className={`w-3.5 h-3.5 ${isActive ? 'text-indigo-600' : 'text-slate-400'}`} />
+                  <span>{tab.label}</span>
                   {count !== null && count > 0 && (
                     <span
-                      className="text-2xs font-semibold px-1.5 py-0.5 rounded-full tabular-nums"
-                      style={{
-                        background: isActive ? 'var(--color-accent)' : '#e2e8f0',
-                        color: isActive ? '#fff' : 'var(--color-text-secondary)',
-                      }}
+                      className={`text-2xs font-mono px-1.5 py-0.2 rounded-full tabular-nums ${
+                        isActive
+                          ? 'bg-indigo-50 text-indigo-700 font-bold border border-indigo-200'
+                          : 'bg-slate-200 text-slate-600'
+                      }`}
                     >
                       {count}
                     </span>
@@ -117,73 +124,77 @@ const Dashboard = () => {
             })}
           </nav>
 
-          {/* Right side */}
-          <div className="flex items-center gap-2 flex-shrink-0">
+          {/* Controls & Environment Status */}
+          <div className="flex items-center gap-3 flex-shrink-0">
             {lastRefreshed && (
-              <span className="text-2xs hidden md:block" style={{ color: 'var(--color-text-muted)' }}>
-                Updated {lastRefreshed.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+              <span className="text-2xs text-slate-400 font-medium hidden md:inline-block">
+                Refreshed {lastRefreshed.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
               </span>
             )}
+
             <button
               id="btn-refresh"
               onClick={refresh}
               disabled={loadingTxns}
-              className="btn-ghost"
-              title="Refresh"
+              className="p-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors"
+              title="Refresh ledger state"
             >
-              <IconRefreshCw className={`w-4 h-4 ${loadingTxns ? 'animate-spin' : ''}`}
-                style={{ animationDuration: '0.65s' }} />
+              <IconRefreshCw className={`w-4 h-4 ${loadingTxns ? 'animate-spin' : ''}`} />
             </button>
 
-            {/* Status indicator */}
-            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg"
-              style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}>
-              <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#059669' }} />
-              <span className="text-2xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>Live</span>
+            {/* Live Operational Pipeline Indicator */}
+            <div className="flex items-center gap-2 px-2.5 py-1 rounded-md bg-emerald-50 border border-emerald-200 text-emerald-800">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+              </span>
+              <span className="text-2xs font-bold tracking-tight">Active Engine</span>
             </div>
           </div>
         </div>
       </header>
 
-      {/* ── Main ────────────────────────────────────────────────────────────── */}
+      {/* ── Main Dashboard Content ─────────────────────────────────────────── */}
       <main className="max-w-[1440px] mx-auto px-6 py-6">
 
-        {/* Top section: Demo controls + Metric cards */}
-        <div className="grid grid-cols-1 xl:grid-cols-[340px,1fr] gap-4 mb-6">
+        {/* Executive Overview Grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-[330px,1fr] gap-4 mb-6">
           <BatchDemoButton onComplete={refresh} count={50} />
           <SummaryCards summary={summary} isLoading={loadingSummary} />
         </div>
 
-        {/* ── Revenue Stream Filter Bar ────────────────────────────────────────── */}
-        <div className="flex flex-wrap items-center justify-between gap-3 mb-4 bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+        {/* ── Risk Category & Ledger Filter Bar ───────────────────────────────── */}
+        <div className="flex flex-wrap items-center justify-between gap-3 mb-4 bg-white p-2 rounded-xl border border-slate-200 shadow-xs">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-2xs font-bold uppercase tracking-wider text-slate-400 mr-2 ml-1">
-              Risk Streams:
+            <span className="text-2xs font-bold uppercase tracking-wider text-slate-400 px-2 py-1">
+              Risk Streams
             </span>
-            {[
-              { id: 'all',                  label: '🌐 All Streams',       count: transactions.length },
-              { id: 'payment_gateway',      label: '⚡ Gateway Failures',  count: transactions.filter(t => t.revenue_stream === 'payment_gateway').length },
-              { id: 'checkout_abandonment', label: '🛒 Cart Drop-offs',    count: transactions.filter(t => t.revenue_stream === 'checkout_abandonment').length },
-              { id: 'subscription_renewal', label: '🔄 Subscriptions',     count: transactions.filter(t => t.revenue_stream === 'subscription_renewal').length },
-              { id: 'b2b_invoice',          label: '🏢 B2B Invoices',      count: transactions.filter(t => t.revenue_stream === 'b2b_invoice').length },
-              { id: 'ptp',                  label: '🤝 PTP Tracker',       count: transactions.filter(t => ['committed', 'kept', 'broken'].includes(t.ptp_status)).length },
-            ].map(st => {
+
+            {STREAM_FILTERS.map(st => {
+              const { Icon } = st;
               const isSel = selectedStream === st.id;
+              const count = st.id === 'all'
+                ? transactions.length
+                : st.id === 'ptp'
+                ? transactions.filter(t => ['committed', 'kept', 'broken'].includes(t.ptp_status)).length
+                : transactions.filter(t => t.revenue_stream === st.id).length;
+
               return (
                 <button
                   key={st.id}
                   onClick={() => { setSelectedStream(st.id); setActiveTab('transactions'); }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                  className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 ${
                     isSel
-                      ? 'bg-slate-900 text-white shadow-sm'
-                      : 'bg-slate-50 hover:bg-slate-100 text-slate-600 border border-slate-200'
+                      ? 'bg-slate-900 text-white shadow-xs'
+                      : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/80'
                   }`}
                 >
+                  <Icon className={`w-3.5 h-3.5 ${isSel ? 'text-white' : 'text-slate-400'}`} />
                   <span>{st.label}</span>
-                  <span className={`text-2xs px-1.5 py-0.2 rounded-full font-mono ${
-                    isSel ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-700'
+                  <span className={`text-2xs px-1.5 py-0.2 rounded-full font-mono font-medium ${
+                    isSel ? 'bg-white/20 text-white' : 'bg-slate-200 text-slate-600'
                   }`}>
-                    {st.count}
+                    {count}
                   </span>
                 </button>
               );
@@ -191,7 +202,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Content area */}
+        {/* Dynamic Views */}
         <div className="animate-fade">
           {activeTab === 'transactions' && (
             <TransactionTable
@@ -212,27 +223,23 @@ const Dashboard = () => {
           )}
         </div>
 
-        {/* ── Footer ─────────────────────────────────────────────────────────── */}
-        <footer
-          className="mt-12 py-6 border-t flex flex-col sm:flex-row items-center justify-between gap-3 text-xs"
-          style={{ borderColor: 'var(--color-border)', color: 'var(--color-text-muted)' }}
-        >
+        {/* ── Enterprise Footer ──────────────────────────────────────────────── */}
+        <footer className="mt-12 py-6 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
           <div className="flex items-center gap-2">
-            <img src="/logo-icon.png" alt="RecoverAI" className="w-4 h-4 object-contain" />
-            <span className="font-medium" style={{ color: 'var(--color-text-secondary)' }}>RecoverAI</span>
-            <span>— Autonomous AI Payment Failure Recovery System</span>
+            <span className="font-semibold text-slate-700">RecoverAI Platform</span>
+            <span>— Autonomous Revenue Recovery & Bounded Intervention Architecture</span>
           </div>
-          <div className="flex items-center gap-3 text-2xs">
-            <span>Bounded Execution</span>
+          <div className="flex items-center gap-3 text-2xs text-slate-400 font-mono">
+            <span>Deterministic Routing</span>
             <span>•</span>
-            <span>Auditable Decision Trail</span>
+            <span>Gemini Reasoning</span>
             <span>•</span>
-            <span>Gemini AI Driven</span>
+            <span>Immutable Audit Provenance</span>
           </div>
         </footer>
       </main>
 
-      {/* ── Audit drawer ────────────────────────────────────────────────────── */}
+      {/* ── Audit & Diagnostic Drawer ──────────────────────────────────────── */}
       {selectedTxn && (
         <AuditTrailDrawer
           transaction={selectedTxn}
@@ -244,3 +251,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+
