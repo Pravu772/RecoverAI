@@ -94,13 +94,7 @@ app.use((req, res) => {
 
 // ── Start server ──────────────────────────────────────────────────────────────
 app.listen(PORT, () => {
-  console.log(`
-  ╔═══════════════════════════════════════╗
-  ║     RecoverAI Backend  🚀             ║
-  ║     Port: ${PORT}                        ║
-  ║     Env:  ${process.env.NODE_ENV || 'development'}                 ║
-  ╚═══════════════════════════════════════╝
-  `);
+  console.log(`RecoverAI backend running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
 });
 
 module.exports = app;

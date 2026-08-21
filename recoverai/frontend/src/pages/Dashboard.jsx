@@ -1,46 +1,39 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getTransactions, getDashboardSummary, getSimulatedTime } from '../api/index.js';
-import SummaryCards from '../components/SummaryCards.jsx';
+import { getTransactions, getDashboardSummary } from '../api/index.js';
+import SummaryCards     from '../components/SummaryCards.jsx';
 import TransactionTable from '../components/TransactionTable.jsx';
 import AuditTrailDrawer from '../components/AuditTrailDrawer.jsx';
-import ExceptionsPanel from '../components/ExceptionsPanel.jsx';
-import BatchDemoButton from '../components/BatchDemoButton.jsx';
-import BreakdownChart from '../components/BreakdownChart.jsx';
+import ExceptionsPanel  from '../components/ExceptionsPanel.jsx';
+import BatchDemoButton  from '../components/BatchDemoButton.jsx';
+import BreakdownChart   from '../components/BreakdownChart.jsx';
+import { IconRefreshCw, IconList, IconAlertTriangle, IconBarChart2, IconActivity, IconShield } from '../components/Icons.jsx';
 
-/**
- * Dashboard — main single-page view for RecoverAI.
- *
- * Layout:
- *  1. Header (logo + simulated time)
- *  2. Demo controls + summary cards
- *  3. Transaction table (full width)
- *  4. Breakdown charts + Exceptions panel (side by side on large screens)
- */
+const TABS = [
+  { id: 'transactions', label: 'Transactions', Icon: IconList },
+  { id: 'exceptions',   label: 'Exceptions',   Icon: IconAlertTriangle },
+  { id: 'analytics',    label: 'Analytics',    Icon: IconBarChart2 },
+];
+
 const Dashboard = () => {
-  const [transactions, setTransactions] = useState([]);
-  const [summary, setSummary] = useState(null);
-  const [selectedTransaction, setSelectedTransaction] = useState(null);
-  const [loadingTxns, setLoadingTxns] = useState(false);
-  const [loadingSummary, setLoadingSummary] = useState(false);
-  const [simulatedTime, setSimulatedTime] = useState(null);
-  const [activeTab, setActiveTab] = useState('all'); // 'all' | 'exceptions'
-  const [lastRefresh, setLastRefresh] = useState(null);
+  const [transactions,     setTransactions]     = useState([]);
+  const [summary,          setSummary]          = useState(null);
+  const [selectedTxn,      setSelectedTxn]      = useState(null);
+  const [loadingTxns,      setLoadingTxns]      = useState(false);
+  const [loadingSummary,   setLoadingSummary]   = useState(false);
+  const [activeTab,        setActiveTab]        = useState('transactions');
+  const [lastRefreshed,    setLastRefreshed]    = useState(null);
 
-  // Fetch all data
   const refresh = useCallback(async () => {
     setLoadingTxns(true);
     setLoadingSummary(true);
-    setLastRefresh(new Date());
-
     try {
-      const [txnData, summaryData, timeData] = await Promise.all([
+      const [txnData, summaryData] = await Promise.all([
         getTransactions({ limit: 200 }),
         getDashboardSummary(),
-        getSimulatedTime(),
       ]);
       setTransactions(txnData.transactions || []);
       setSummary(summaryData);
-      setSimulatedTime(timeData);
+      setLastRefreshed(new Date());
     } catch (err) {
       console.error('Refresh failed:', err.message);
     } finally {
@@ -49,140 +42,147 @@ const Dashboard = () => {
     }
   }, []);
 
-  // Initial load
-  useEffect(() => {
-    refresh();
-  }, [refresh]);
+  useEffect(() => { refresh(); }, [refresh]);
+
+  const exceptionCount = transactions.filter(t =>
+    ['exception', 'max_retries_reached', 'pending_human', 'opted_out'].includes(t.status)
+  ).length;
 
   return (
-    <div className="min-h-screen">
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 border-b border-white/5 bg-surface-900/80 backdrop-blur-xl">
-        <div className="max-w-[1600px] mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
-          {/* Logo */}
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary-500 to-teal-500 flex items-center justify-center text-lg shadow-glow-blue flex-shrink-0">
-              ⚡
+    <div style={{ minHeight: '100vh', background: 'var(--color-bg)' }}>
+
+      {/* ── Top nav ─────────────────────────────────────────────────────────── */}
+      <header
+        className="sticky top-0 z-30"
+        style={{
+          background: 'var(--color-surface)',
+          borderBottom: '1px solid var(--color-border)',
+          boxShadow: 'var(--shadow-xs)',
+        }}
+      >
+        <div className="max-w-[1440px] mx-auto px-6 h-14 flex items-center justify-between gap-6">
+
+          {/* Brand */}
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <div
+              className="w-7 h-7 rounded-lg flex items-center justify-center"
+              style={{ background: 'var(--color-accent)', color: '#fff' }}
+            >
+              <IconActivity className="w-3.5 h-3.5" strokeWidth={2} />
             </div>
-            <div>
-              <h1 className="text-lg font-bold tracking-tight bg-gradient-to-r from-primary-400 to-teal-400 bg-clip-text text-transparent">
-                RecoverAI
-              </h1>
-              <p className="text-xs text-slate-500 hidden sm:block">Payment Failure Recovery System</p>
-            </div>
+            <span className="font-semibold text-sm tracking-tight" style={{ color: 'var(--color-text-primary)' }}>
+              RecoverAI
+            </span>
+            <span
+              className="text-2xs font-medium px-2 py-0.5 rounded-full hidden sm:inline-flex"
+              style={{ background: 'var(--color-accent-light)', color: 'var(--color-accent)' }}
+            >
+              Revenue Recovery
+            </span>
           </div>
 
+          {/* Center tabs */}
+          <nav className="flex items-center gap-0.5">
+            {TABS.map(tab => {
+              const { Icon } = tab;
+              const isActive = activeTab === tab.id;
+              const count = tab.id === 'transactions' ? transactions.length
+                          : tab.id === 'exceptions' ? exceptionCount
+                          : null;
+              return (
+                <button
+                  key={tab.id}
+                  id={`tab-${tab.id}`}
+                  onClick={() => setActiveTab(tab.id)}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all"
+                  style={{
+                    color:  isActive ? 'var(--color-accent)' : 'var(--color-text-secondary)',
+                    background: isActive ? 'var(--color-accent-light)' : 'transparent',
+                  }}
+                  onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'var(--color-bg)'; }}
+                  onMouseLeave={e => { if (!isActive) e.currentTarget.style.background = 'transparent'; }}
+                >
+                  <Icon className="w-3.5 h-3.5" />
+                  {tab.label}
+                  {count !== null && count > 0 && (
+                    <span
+                      className="text-2xs font-semibold px-1.5 py-0.5 rounded-full tabular-nums"
+                      style={{
+                        background: isActive ? 'var(--color-accent)' : '#e2e8f0',
+                        color: isActive ? '#fff' : 'var(--color-text-secondary)',
+                      }}
+                    >
+                      {count}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+
           {/* Right side */}
-          <div className="flex items-center gap-3">
-            {/* Simulated time chip */}
-            {simulatedTime?.total_offset_hours > 0 && (
-              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full">
-                <span className="text-amber-400 text-xs">⏩</span>
-                <span className="text-xs text-amber-400 font-medium">
-                  +{simulatedTime.total_offset_hours.toFixed(0)}h ahead
-                </span>
-              </div>
+          <div className="flex items-center gap-2 flex-shrink-0">
+            {lastRefreshed && (
+              <span className="text-2xs hidden md:block" style={{ color: 'var(--color-text-muted)' }}>
+                Updated {lastRefreshed.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
+              </span>
             )}
-
-            {/* Backend status dot */}
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-surface-700 rounded-full border border-surface-500">
-              <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span className="text-xs text-slate-400 hidden sm:block">Live</span>
-            </div>
-
-            {/* Refresh */}
             <button
               id="btn-refresh"
               onClick={refresh}
               disabled={loadingTxns}
-              className="p-2 rounded-xl hover:bg-surface-700 transition-colors text-slate-400 hover:text-slate-200 disabled:opacity-50"
-              title="Refresh data"
+              className="btn-ghost"
+              title="Refresh"
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className={`w-4 h-4 ${loadingTxns ? 'animate-spin' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-              </svg>
+              <IconRefreshCw className={`w-4 h-4 ${loadingTxns ? 'animate-spin' : ''}`}
+                style={{ animationDuration: '0.65s' }} />
             </button>
+
+            {/* Status indicator */}
+            <div className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg"
+              style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}>
+              <div className="w-1.5 h-1.5 rounded-full" style={{ background: '#059669' }} />
+              <span className="text-2xs font-medium" style={{ color: 'var(--color-text-secondary)' }}>Live</span>
+            </div>
           </div>
         </div>
       </header>
 
-      {/* ── Main content ───────────────────────────────────────────────────── */}
-      <main className="max-w-[1600px] mx-auto px-4 sm:px-6 py-6 space-y-6">
+      {/* ── Main ────────────────────────────────────────────────────────────── */}
+      <main className="max-w-[1440px] mx-auto px-6 py-6">
 
-        {/* Demo controls + summary cards */}
-        <div className="grid grid-cols-1 xl:grid-cols-[380px,1fr] gap-4 items-start">
+        {/* Top section: Demo controls + Metric cards */}
+        <div className="grid grid-cols-1 xl:grid-cols-[340px,1fr] gap-4 mb-6">
           <BatchDemoButton onComplete={refresh} count={50} />
           <SummaryCards summary={summary} isLoading={loadingSummary} />
         </div>
 
-        {/* Tab switcher */}
-        <div className="flex items-center gap-1 p-1 bg-surface-800 rounded-xl w-fit border border-surface-600">
-          {[
-            { id: 'all', label: 'All Transactions', count: transactions.length },
-            { id: 'exceptions', label: 'Exceptions', count: transactions.filter(t => ['exception','max_retries_reached','pending_human','opted_out'].includes(t.status)).length },
-            { id: 'charts', label: 'Analytics', count: null },
-          ].map(tab => (
-            <button
-              key={tab.id}
-              id={`tab-${tab.id}`}
-              onClick={() => setActiveTab(tab.id)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
-                activeTab === tab.id
-                  ? 'bg-primary-500 text-white shadow-glow-blue'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-surface-700'
-              }`}
-            >
-              {tab.label}
-              {tab.count !== null && tab.count > 0 && (
-                <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${
-                  activeTab === tab.id ? 'bg-white/20 text-white' : 'bg-surface-600 text-slate-400'
-                }`}>
-                  {tab.count}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-
-        {/* Tab content */}
-        {activeTab === 'all' && (
-          <div className="animate-fade-in">
+        {/* Content area */}
+        <div className="animate-fade">
+          {activeTab === 'transactions' && (
             <TransactionTable
               transactions={transactions}
-              onRowClick={setSelectedTransaction}
+              onRowClick={setSelectedTxn}
               isLoading={loadingTxns}
             />
-          </div>
-        )}
-
-        {activeTab === 'exceptions' && (
-          <div className="animate-fade-in">
+          )}
+          {activeTab === 'exceptions' && (
             <ExceptionsPanel
               transactions={transactions}
-              onRowClick={setSelectedTransaction}
+              onRowClick={setSelectedTxn}
             />
-          </div>
-        )}
-
-        {activeTab === 'charts' && (
-          <div className="animate-fade-in">
+          )}
+          {activeTab === 'analytics' && (
             <BreakdownChart breakdown={summary?.breakdown_by_reason} />
-          </div>
-        )}
-
-        {/* Last refresh */}
-        {lastRefresh && (
-          <p className="text-xs text-slate-700 text-center">
-            Last updated: {lastRefresh.toLocaleTimeString('en-IN')}
-          </p>
-        )}
+          )}
+        </div>
       </main>
 
-      {/* ── Audit Trail Drawer ─────────────────────────────────────────────── */}
-      {selectedTransaction && (
+      {/* ── Audit drawer ────────────────────────────────────────────────────── */}
+      {selectedTxn && (
         <AuditTrailDrawer
-          transaction={selectedTransaction}
-          onClose={() => setSelectedTransaction(null)}
+          transaction={selectedTxn}
+          onClose={() => setSelectedTxn(null)}
         />
       )}
     </div>

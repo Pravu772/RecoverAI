@@ -1,34 +1,32 @@
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, Cell, PieChart, Pie, Legend,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  Cell, PieChart, Pie, Legend,
 } from 'recharts';
 
 const REASON_CONFIG = {
-  insufficient_funds: { label: 'Insuf. Funds',  color: '#f59e0b' },
-  card_expired:       { label: 'Card Expired',  color: '#f97316' },
-  bank_timeout:       { label: 'Bank Timeout',  color: '#3b82f6' },
-  mandate_expired:    { label: 'Mandate Exp.',  color: '#8b5cf6' },
-  network_error:      { label: 'Network Err.',  color: '#22d3ee' },
-  unknown:            { label: 'Unknown',       color: '#64748b' },
+  insufficient_funds: { label: 'Insuf. Funds',  color: '#d97706' },
+  card_expired:       { label: 'Card Expired',  color: '#ea580c' },
+  bank_timeout:       { label: 'Bank Timeout',  color: '#1d4ed8' },
+  mandate_expired:    { label: 'Mandate Exp.',  color: '#7c3aed' },
+  network_error:      { label: 'Network Err.',  color: '#0891b2' },
+  unknown:            { label: 'Unknown',       color: '#94a3b8' },
 };
 
-const formatINR = (val) =>
-  val >= 100000
-    ? `₹${(val / 100000).toFixed(1)}L`
-    : val >= 1000
-      ? `₹${(val / 1000).toFixed(0)}K`
-      : `₹${val}`;
+const fmtINR = (v) =>
+  v >= 100000 ? `₹${(v/100000).toFixed(1)}L`
+  : v >= 1000 ? `₹${(v/1000).toFixed(0)}K`
+  : `₹${v}`;
 
-const CustomTooltip = ({ active, payload, label }) => {
+const TooltipContent = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
   return (
-    <div className="glass-card p-3 text-xs min-w-[160px]">
-      <p className="text-slate-300 font-semibold mb-2">{label}</p>
+    <div className="card p-3 text-xs min-w-[150px]" style={{ boxShadow: 'var(--shadow-md)' }}>
+      <p className="font-semibold mb-2" style={{ color: 'var(--color-text-primary)' }}>{label}</p>
       {payload.map((p, i) => (
         <div key={i} className="flex justify-between gap-4">
-          <span style={{ color: p.color }}>{p.name}</span>
-          <span className="text-slate-200 font-mono">
-            {p.name === 'Recovery Rate' ? `${p.value}%` : formatINR(p.value)}
+          <span style={{ color: p.color || 'var(--color-text-secondary)' }}>{p.name}</span>
+          <span className="font-mono" style={{ color: 'var(--color-text-primary)' }}>
+            {p.name === 'Rate' ? `${p.value}%` : fmtINR(p.value)}
           </span>
         </div>
       ))}
@@ -36,30 +34,32 @@ const CustomTooltip = ({ active, payload, label }) => {
   );
 };
 
-/**
- * BreakdownChart — bar + donut charts showing recovery by failure reason.
- */
+const SectionHeader = ({ children }) => (
+  <p className="text-2xs font-semibold uppercase tracking-wider mb-4"
+    style={{ color: 'var(--color-text-muted)' }}>
+    {children}
+  </p>
+);
+
 const BreakdownChart = ({ breakdown }) => {
   if (!breakdown || Object.keys(breakdown).length === 0) {
     return (
-      <div className="glass-card p-6 flex items-center justify-center h-56 text-slate-500 text-sm">
-        No data yet — run the demo to see charts
+      <div className="card p-8 flex items-center justify-center text-sm"
+        style={{ color: 'var(--color-text-muted)', height: 240 }}>
+        No data — run the demo to see analytics
       </div>
     );
   }
 
-  // Prepare bar chart data
   const barData = Object.entries(breakdown)
     .filter(([, v]) => v.total > 0)
     .map(([reason, v]) => ({
       name: REASON_CONFIG[reason]?.label || reason,
       reason,
-      'Amount at Risk': v.amount_at_risk,
+      'At Risk': v.amount_at_risk,
       'Recovered': v.amount_recovered,
-      'Recovery Rate': v.recovery_rate,
     }));
 
-  // Prepare donut data (total amount by reason)
   const donutData = Object.entries(breakdown)
     .filter(([, v]) => v.total > 0)
     .map(([reason, v]) => ({
@@ -68,93 +68,108 @@ const BreakdownChart = ({ breakdown }) => {
       color: REASON_CONFIG[reason]?.color || '#94a3b8',
     }));
 
+  const rateData = Object.entries(breakdown)
+    .filter(([, v]) => v.total > 0)
+    .sort((a, b) => b[1].recovery_rate - a[1].recovery_rate);
+
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-      {/* Bar chart — amounts */}
-      <div className="glass-card p-5">
-        <h4 className="section-header mb-4">
-          <span>💰</span> Recovery Amount by Reason
-        </h4>
+      {/* Bar chart */}
+      <div className="card p-5">
+        <SectionHeader>Recovery Amount by Failure Type</SectionHeader>
         <ResponsiveContainer width="100%" height={200}>
-          <BarChart data={barData} margin={{ top: 0, right: 0, left: 10, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" tick={{ fontSize: 10, fill: '#94a3b8' }} />
-            <YAxis tickFormatter={formatINR} tick={{ fontSize: 10, fill: '#94a3b8' }} />
-            <Tooltip content={<CustomTooltip />} />
-            <Bar dataKey="Amount at Risk" fill="#1e3457" radius={[4,4,0,0]} />
-            <Bar dataKey="Recovered" radius={[4,4,0,0]}>
-              {barData.map((entry, i) => (
-                <Cell key={i} fill={REASON_CONFIG[entry.reason]?.color || '#14b8a6'} />
+          <BarChart data={barData} margin={{ top: 0, right: 0, left: 8, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} />
+            <XAxis dataKey="name" tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+            <YAxis tickFormatter={fmtINR} tick={{ fontSize: 11 }} axisLine={false} tickLine={false} />
+            <Tooltip content={<TooltipContent />} />
+            <Bar dataKey="At Risk" fill="#f1f5f9" radius={[3,3,0,0]} />
+            <Bar dataKey="Recovered" radius={[3,3,0,0]}>
+              {barData.map((e, i) => (
+                <Cell key={i} fill={REASON_CONFIG[e.reason]?.color || '#1d4ed8'} />
               ))}
             </Bar>
           </BarChart>
         </ResponsiveContainer>
-        <div className="flex gap-3 mt-3 flex-wrap">
-          <div className="flex items-center gap-1.5 text-xs text-slate-400">
-            <div className="w-3 h-3 rounded-sm bg-surface-600 border border-surface-500" />
+        <div className="flex items-center gap-4 mt-3 pt-3"
+          style={{ borderTop: '1px solid var(--color-border)' }}>
+          <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+            <div className="w-3 h-3 rounded-sm" style={{ background: '#f1f5f9', border: '1px solid #e2e8f0' }} />
             At Risk
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-slate-400">
-            <div className="w-3 h-3 rounded-sm bg-teal-500" />
+          <div className="flex items-center gap-1.5 text-xs" style={{ color: 'var(--color-text-muted)' }}>
+            <div className="w-3 h-3 rounded-sm" style={{ background: '#1d4ed8' }} />
             Recovered
           </div>
         </div>
       </div>
 
-      {/* Donut chart — transaction count distribution */}
-      <div className="glass-card p-5">
-        <h4 className="section-header mb-4">
-          <span>🍩</span> Failure Type Distribution
-        </h4>
+      {/* Donut chart */}
+      <div className="card p-5">
+        <SectionHeader>Failure Type Distribution</SectionHeader>
         <ResponsiveContainer width="100%" height={200}>
           <PieChart>
             <Pie
               data={donutData}
               cx="50%"
               cy="50%"
-              innerRadius={55}
+              innerRadius={56}
               outerRadius={80}
-              paddingAngle={3}
+              paddingAngle={2}
               dataKey="value"
+              strokeWidth={0}
             >
-              {donutData.map((entry, index) => (
-                <Cell key={index} fill={entry.color} stroke="none" />
+              {donutData.map((entry, i) => (
+                <Cell key={i} fill={entry.color} />
               ))}
             </Pie>
             <Tooltip
-              formatter={(value, name) => [value, name]}
-              contentStyle={{ background: '#0d1529', border: '1px solid rgba(255,255,255,0.06)', borderRadius: '12px', fontSize: '12px' }}
+              formatter={(v, n) => [v, n]}
+              contentStyle={{
+                background: '#fff',
+                border: '1px solid #e2e8f0',
+                borderRadius: '8px',
+                fontSize: '12px',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+              }}
             />
             <Legend
-              formatter={(value) => <span style={{ color: '#94a3b8', fontSize: '11px' }}>{value}</span>}
+              formatter={(v) => <span style={{ color: '#475569', fontSize: '11px' }}>{v}</span>}
+              iconSize={10}
+              iconType="circle"
             />
           </PieChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Recovery rate by reason — mini table */}
-      <div className="glass-card p-5 xl:col-span-2">
-        <h4 className="section-header mb-4"><span>📊</span> Recovery Rate by Reason</h4>
+      {/* Recovery rate bars — full width */}
+      <div className="card p-5 xl:col-span-2">
+        <SectionHeader>Recovery Rate by Failure Reason</SectionHeader>
         <div className="space-y-3">
-          {Object.entries(breakdown)
-            .filter(([, v]) => v.total > 0)
-            .sort((a, b) => b[1].recovery_rate - a[1].recovery_rate)
-            .map(([reason, v]) => {
-              const config = REASON_CONFIG[reason] || { label: reason, color: '#94a3b8' };
-              return (
-                <div key={reason} className="flex items-center gap-3">
-                  <div className="w-28 text-xs text-slate-400 truncate flex-shrink-0">{config.label}</div>
-                  <div className="flex-1 bg-surface-700 rounded-full h-2 overflow-hidden">
-                    <div
-                      className="h-full rounded-full transition-all duration-700"
-                      style={{ width: `${v.recovery_rate}%`, backgroundColor: config.color }}
-                    />
-                  </div>
-                  <div className="text-xs font-mono text-slate-300 w-10 text-right">{v.recovery_rate}%</div>
-                  <div className="text-xs text-slate-600 w-16 text-right">{v.recovered}/{v.total}</div>
+          {rateData.map(([reason, v]) => {
+            const cfg = REASON_CONFIG[reason] || { label: reason, color: '#94a3b8' };
+            return (
+              <div key={reason} className="flex items-center gap-3">
+                <div className="w-24 text-xs flex-shrink-0 truncate" style={{ color: 'var(--color-text-secondary)' }}>
+                  {cfg.label}
                 </div>
-              );
-            })}
+                <div className="flex-1 progress-track">
+                  <div
+                    className="progress-fill transition-all duration-700"
+                    style={{ width: `${v.recovery_rate}%`, background: cfg.color }}
+                  />
+                </div>
+                <span className="w-10 text-right font-mono text-xs flex-shrink-0"
+                  style={{ color: 'var(--color-text-secondary)' }}>
+                  {v.recovery_rate}%
+                </span>
+                <span className="w-14 text-right text-xs flex-shrink-0"
+                  style={{ color: 'var(--color-text-muted)' }}>
+                  {v.recovered}/{v.total}
+                </span>
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
