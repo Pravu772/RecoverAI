@@ -1,9 +1,8 @@
 import { IconX, IconFileText, IconTrendingUp, IconCheckCircle, IconShield, IconActivity } from './Icons.jsx';
-
-const formatINR = (n) =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
+import { useCurrency } from '../context/CurrencyContext.jsx';
 
 const CFODigestModal = ({ isOpen, onClose, summary, transactions }) => {
+  const { formatMoney } = useCurrency();
   if (!isOpen) return null;
 
   const s = summary || {};
@@ -38,10 +37,10 @@ const CFODigestModal = ({ isOpen, onClose, summary, transactions }) => {
                 <span className="text-2xs font-bold uppercase tracking-widest px-2 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
                   Executive Briefing
                 </span>
-                <span className="text-2xs text-slate-500 font-mono">Q1 Recovery Audit</span>
+                <span className="text-2xs text-slate-500 font-mono">CFO Digest</span>
               </div>
               <h3 className="text-sm font-bold text-slate-900 mt-0.5">
-                CFO Revenue Yield & Unit Economics Digest
+                Autonomous Revenue Recovery & Unit Economics Digest
               </h3>
             </div>
           </div>
@@ -55,7 +54,7 @@ const CFODigestModal = ({ isOpen, onClose, summary, transactions }) => {
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-5 bg-slate-50/40 overflow-y-auto max-h-[70vh]">
+        <div className="p-6 space-y-5 bg-slate-50/50 max-h-[75vh] overflow-y-auto">
           
           {/* Executive Summary Narrative */}
           <div className="p-4 rounded-xl bg-white border border-slate-200 shadow-xs space-y-2">
@@ -64,7 +63,7 @@ const CFODigestModal = ({ isOpen, onClose, summary, transactions }) => {
             </h4>
             <p className="text-xs text-slate-600 leading-relaxed">
               During the active period, RecoverAI processed <strong>{s.total_transactions || 0} failed events</strong> across 4 revenue streams. 
-              The platform achieved an overall <strong>{yieldRate}% autonomous recovery rate</strong>, securing <strong>{formatINR(recoveredAmount)}</strong> in gross revenue with an estimated operating compute and communication cost of <strong>{formatINR(opsCost)}</strong>.
+              The platform achieved an overall <strong>{yieldRate}% autonomous recovery rate</strong>, securing <strong>{formatMoney(recoveredAmount)}</strong> in gross revenue with an estimated operating compute and communication cost of <strong>{formatMoney(opsCost)}</strong>.
             </p>
           </div>
 
@@ -72,19 +71,19 @@ const CFODigestModal = ({ isOpen, onClose, summary, transactions }) => {
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="p-3 bg-white rounded-xl border border-slate-200">
               <p className="text-2xs font-semibold text-slate-500 uppercase">Gross At-Risk</p>
-              <p className="text-sm font-bold font-mono text-slate-900 mt-1">{formatINR(totalAmount)}</p>
+              <p className="text-sm font-bold font-mono text-slate-900 mt-1">{formatMoney(totalAmount)}</p>
             </div>
             <div className="p-3 bg-white rounded-xl border border-slate-200">
               <p className="text-2xs font-semibold text-slate-500 uppercase">Capital Rescued</p>
-              <p className="text-sm font-bold font-mono text-emerald-600 mt-1">{formatINR(recoveredAmount)}</p>
+              <p className="text-sm font-bold font-mono text-emerald-600 mt-1">{formatMoney(recoveredAmount)}</p>
             </div>
             <div className="p-3 bg-white rounded-xl border border-slate-200">
               <p className="text-2xs font-semibold text-slate-500 uppercase">Est. AI Ops Cost</p>
-              <p className="text-sm font-bold font-mono text-slate-700 mt-1">{formatINR(opsCost)}</p>
+              <p className="text-sm font-bold font-mono text-slate-700 mt-1">{formatMoney(opsCost)}</p>
             </div>
             <div className="p-3 bg-white rounded-xl border border-slate-200">
               <p className="text-2xs font-semibold text-slate-500 uppercase">Net Yield</p>
-              <p className="text-sm font-bold font-mono text-indigo-700 mt-1">{formatINR(netSaved)}</p>
+              <p className="text-sm font-bold font-mono text-indigo-700 mt-1">{formatMoney(netSaved)}</p>
             </div>
           </div>
 

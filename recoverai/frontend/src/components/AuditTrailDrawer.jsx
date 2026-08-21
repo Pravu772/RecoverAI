@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { getAuditTrail, getOrGenerateVoiceScript, setPromiseToPay, updatePTPStatus } from '../api/index.js';
+import { useCurrency } from '../context/CurrencyContext.jsx';
 import {
   IconX, IconCheckCircle, IconAlertTriangle, IconZap, IconShield, IconActivity,
   IconMic, IconCalendar, IconRepeat, IconPlay, IconPause, IconSquare,
@@ -22,9 +23,6 @@ const OUTCOME_STYLE = {
   blocked: { color: '#475569', bg: '#f8fafc', border: '#e2e8f0' },
 };
 
-const formatINR = (n) =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
-
 const formatDate = (d) =>
   new Date(d).toLocaleString('en-IN', {
     day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit',
@@ -44,6 +42,7 @@ const STATUS_BADGE = {
 };
 
 const AuditTrailDrawer = ({ transaction, onClose }) => {
+  const { formatMoney } = useCurrency();
   const [data, setData]             = useState(null);
   const [loading, setLoading]       = useState(true);
   const [error, setError]           = useState(null);
@@ -256,7 +255,7 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
           <div className="grid grid-cols-3 gap-4">
             <div>
               <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500">Amount at Risk</p>
-              <p className="text-lg font-bold font-mono text-slate-900 mt-0.5">{formatINR(currentTxn.amount)}</p>
+              <p className="text-lg font-bold font-mono text-slate-900 mt-0.5">{formatMoney(currentTxn.amount)}</p>
             </div>
             <div>
               <p className="text-2xs font-semibold uppercase tracking-wider text-slate-500">Current Status</p>
@@ -402,7 +401,7 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
                 <div className="p-4 bg-slate-50/70">
                   <div className="max-w-[340px] bg-white rounded-2xl rounded-tl-xs p-3.5 border border-slate-200 shadow-xs space-y-2 text-xs">
                     <p className="font-semibold text-slate-900">
-                      Hi {currentTxn.customer_name || 'there'}, your transaction of <span className="font-bold text-emerald-700">{formatINR(currentTxn.amount)}</span> was not completed.
+                      Hi {currentTxn.customer_name || 'there'}, your transaction of <span className="font-bold text-emerald-700">{formatMoney(currentTxn.amount)}</span> was not completed.
                     </p>
                     <p className="text-2xs text-slate-600 leading-relaxed">
                       {currentTxn.cart_summary
@@ -411,7 +410,7 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
                     </p>
                     <div className="pt-2 border-t border-slate-100">
                       <button className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition-colors text-center">
-                        Complete Payment ({formatINR(currentTxn.amount)})
+                        Complete Payment ({formatMoney(currentTxn.amount)})
                       </button>
                     </div>
                   </div>
@@ -426,7 +425,7 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
                 </div>
                 <div className="p-4 bg-slate-50/50">
                   <div className="p-3 bg-white rounded-xl border border-slate-200 text-xs font-mono text-slate-700 leading-relaxed">
-                    [RECOVERAI] Payment of {formatINR(currentTxn.amount)} at {currentTxn.merchant_id || 'Merchant'} failed ({currentTxn.failure_code}). Tap link to retry immediately: https://pay.recoverai.io/r/{currentTxn.transaction_id}
+                    [RECOVERAI] Payment of {formatMoney(currentTxn.amount)} at {currentTxn.merchant_id || 'Merchant'} failed ({currentTxn.failure_code}). Tap link to retry immediately: https://pay.recoverai.io/r/{currentTxn.transaction_id}
                   </div>
                 </div>
               </div>

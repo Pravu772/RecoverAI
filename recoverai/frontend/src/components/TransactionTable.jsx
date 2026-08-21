@@ -5,7 +5,7 @@ import {
   IconZap, IconShoppingCart, IconRepeat, IconFileText, IconCalendar,
   IconBrain, IconLayers, IconUser
 } from './Icons.jsx';
-import { formatCurrency } from '../utils/currency.js';
+import { useCurrency } from '../context/CurrencyContext.jsx';
 
 const STATUS_META = {
   failed:              { label: 'Failed',            cls: 'bg-rose-50 text-rose-700 border-rose-200' },
@@ -29,9 +29,9 @@ const STREAM_META = {
 
 const REASON_COLORS = {
   insufficient_funds:          '#d97706',
-  card_expired:                '#ea580c',
-  bank_timeout:                '#2563eb',
-  mandate_expired:             '#7c3aed',
+  card_expired:                '#dc2626',
+  bank_timeout:                '#7c3aed',
+  mandate_expired:             '#059669',
   network_error:               '#0891b2',
   checkout_hesitation:         '#ea580c',
   otp_dropoff:                 '#e11d48',
@@ -40,9 +40,6 @@ const REASON_COLORS = {
   subscription_failed_billing: '#6d28d9',
   unknown:                     '#64748b',
 };
-
-const formatINR = (n) =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
 
 const ConfidencePopover = ({ score, txn }) => {
   const [open, setOpen] = useState(false);
@@ -54,10 +51,9 @@ const ConfidencePopover = ({ score, txn }) => {
     <div className="relative inline-block" onClick={e => e.stopPropagation()}>
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 p-1 rounded hover:bg-slate-100 transition-colors"
-        title="Click to view Gemini Diagnostic Signals"
+        className="flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-slate-50 hover:bg-slate-100 border border-slate-200 transition-colors"
       >
-        <div className="w-10 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+        <div className="w-8 h-1.5 bg-slate-200 rounded-full overflow-hidden">
           <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
         </div>
         <span className="font-mono text-2xs font-semibold" style={{ color }}>{pct}%</span>
@@ -95,7 +91,8 @@ const SortIcon = ({ field, active, dir }) => {
     : <IconChevronDown className="w-3 h-3 inline ml-0.5 text-indigo-600" />;
 };
 
-const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream, currency = 'INR' }) => {
+const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream }) => {
+  const { formatMoney } = useCurrency();
   const [sortField, setSortField] = useState('created_at');
   const [sortDir,   setSortDir]   = useState('desc');
   const [fStatus,   setFStatus]   = useState('');
@@ -460,7 +457,7 @@ const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream,
                   {/* At Risk Amount */}
                   <td>
                     <span className="font-bold font-mono text-xs text-slate-900 tabular-nums">
-                      {formatCurrency(txn.amount, currency)}
+                      {formatMoney(txn.amount)}
                     </span>
                   </td>
 

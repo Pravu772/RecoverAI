@@ -22,6 +22,8 @@ import {
   IconSearch, IconShield, IconPlay, IconUser, IconActivity
 } from '../components/Icons.jsx';
 
+import { useCurrency } from '../context/CurrencyContext.jsx';
+
 const TABS = [
   { id: 'transactions', label: 'Transactions Ledger', Icon: IconList },
   { id: 'exceptions',   label: 'Exception Queue',     Icon: IconAlertTriangle },
@@ -38,6 +40,7 @@ const STREAM_FILTERS = [
 ];
 
 const Dashboard = () => {
+  const { currency, setCurrency } = useCurrency();
   const [transactions,     setTransactions]     = useState([]);
   const [summary,          setSummary]          = useState(null);
   const [selectedTxn,      setSelectedTxn]      = useState(null);
@@ -47,7 +50,6 @@ const Dashboard = () => {
   const [selectedStream,   setSelectedStream]   = useState('all');
   const [lastRefreshed,    setLastRefreshed]    = useState(null);
   const [toasts,           setToasts]           = useState([]);
-  const [currency,         setCurrency]         = useState('INR');
 
   // Multi-Tenant RBAC State
   const [currentTenant,    setCurrentTenant]    = useState({ id: 'MER_SWIGGY', name: 'Swiggy Food & Instamart', tier: 'Enterprise Tier-1', logoText: 'SW' });

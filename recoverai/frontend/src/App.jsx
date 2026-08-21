@@ -1,7 +1,12 @@
-import Dashboard from './pages/Dashboard.jsx'
+import Dashboard from './pages/Dashboard.jsx';
+import { CurrencyProvider } from './context/CurrencyContext.jsx';
 
 function App() {
-  return <Dashboard />
+  return (
+    <CurrencyProvider>
+      <Dashboard />
+    </CurrencyProvider>
+  );
 }
 
-export default App
+export default App;

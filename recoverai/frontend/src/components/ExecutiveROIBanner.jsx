@@ -1,9 +1,8 @@
 import { IconTrendingUp, IconShield, IconActivity, IconZap } from './Icons.jsx';
-
-const formatINR = (n) =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
+import { useCurrency } from '../context/CurrencyContext.jsx';
 
 const ExecutiveROIBanner = ({ summary, onOpenCompliance, onOpenCFO, onOpenPolicy }) => {
+  const { formatMoney } = useCurrency();
   const s = summary || {};
   const recoveredAmount = s.total_recovered_amount || 0;
   const recoveredCount  = s.status_breakdown?.recovered || 0;
@@ -41,21 +40,21 @@ const ExecutiveROIBanner = ({ summary, onOpenCompliance, onOpenCFO, onOpenPolicy
           <div>
             <p className="text-2xs font-semibold text-slate-500 uppercase tracking-wider">Gross Rescued</p>
             <p className="text-base font-bold font-mono text-emerald-600 mt-0.5">
-              {formatINR(recoveredAmount)}
+              {formatMoney(recoveredAmount)}
             </p>
           </div>
 
           <div>
             <p className="text-2xs font-semibold text-slate-500 uppercase tracking-wider">Est. AI Ops Cost</p>
             <p className="text-base font-bold font-mono text-slate-700 mt-0.5">
-              {formatINR(estimatedCost)}
+              {formatMoney(estimatedCost)}
             </p>
           </div>
 
           <div>
             <p className="text-2xs font-semibold text-slate-500 uppercase tracking-wider">Net Recovered</p>
             <p className="text-base font-bold font-mono text-indigo-700 mt-0.5">
-              {formatINR(netSavings)}
+              {formatMoney(netSavings)}
             </p>
           </div>
 

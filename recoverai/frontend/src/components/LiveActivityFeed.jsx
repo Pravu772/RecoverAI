@@ -1,15 +1,14 @@
-import { useState, useEffect } from 'react';
-import { IconActivity, IconZap, IconCheckCircle, IconAlertTriangle, IconRepeat, IconShield } from './Icons.jsx';
-
-const formatINR = (n) =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
+import { useState } from 'react';
+import { IconZap, IconCheckCircle, IconAlertTriangle } from './Icons.jsx';
+import { useCurrency } from '../context/CurrencyContext.jsx';
 
 const LiveActivityFeed = ({ transactions, onSelectTxn }) => {
+  const { formatMoney } = useCurrency();
   const [isExpanded, setIsExpanded] = useState(true);
   const [filterType, setFilterType] = useState('all');
 
   // Derive recent activity events from transaction updates
-  const recentEvents = transactions
+  const recentEvents = (transactions || [])
     .filter(t => t.status !== 'failed')
     .slice(0, 15);
 
@@ -49,16 +48,16 @@ const LiveActivityFeed = ({ transactions, onSelectTxn }) => {
 
           <button
             onClick={() => setIsExpanded(!isExpanded)}
-            className="text-2xs font-semibold text-slate-500 hover:text-slate-800 transition-colors"
+            className="p-1 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors text-2xs font-mono"
           >
-            {isExpanded ? 'Collapse' : 'Expand Stream'}
+            {isExpanded ? 'Hide' : 'Show'}
           </button>
         </div>
       </div>
 
-      {/* Events List */}
+      {/* Feed Event Items List */}
       {isExpanded && (
-        <div className="p-3 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-[160px] overflow-y-auto bg-slate-50/40">
+        <div className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-56 overflow-y-auto bg-slate-50/40">
           {recentEvents.length === 0 ? (
             <div className="col-span-full py-6 text-center text-xs text-slate-400">
               Pipeline waiting for initial transaction batch — click "Run Full Recovery Cycle"
@@ -72,43 +71,45 @@ const LiveActivityFeed = ({ transactions, onSelectTxn }) => {
               })
               .map((t, idx) => {
                 const isRecovered = t.status === 'recovered';
-                const isException = t.status === 'exception' || t.status === 'max_retries_reached';
+                const isException = ['exception', 'max_retries_reached', 'pending_human'].includes(t.status);
 
                 return (
                   <div
                     key={t.transaction_id || idx}
-                    onClick={() => onSelectTxn(t)}
-                    className="p-2.5 rounded-xl border border-slate-200/80 bg-white hover:border-indigo-300 hover:shadow-2xs transition-all cursor-pointer flex items-start gap-2.5 group"
+                    onClick={() => onSelectTxn && onSelectTxn(t)}
+                    className="p-2.5 rounded-xl bg-white border border-slate-200 hover:border-indigo-300 hover:shadow-2xs transition-all cursor-pointer flex items-center justify-between gap-3 group"
                   >
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                      isRecovered ? 'bg-emerald-50 text-emerald-600' :
-                      isException ? 'bg-rose-50 text-rose-600' : 'bg-blue-50 text-blue-600'
-                    }`}>
-                      {isRecovered ? <IconCheckCircle className="w-3.5 h-3.5" /> :
-                       isException ? <IconAlertTriangle className="w-3.5 h-3.5" /> :
-                       <IconZap className="w-3.5 h-3.5" />}
-                    </div>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-1">
-                        <span className="text-xs font-bold text-slate-800 truncate">
-                          {t.customer_name || 'Account'}
-                        </span>
-                        <span className="text-2xs font-mono font-bold text-slate-900 tabular-nums">
-                          {formatINR(t.amount)}
-                        </span>
+                    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                        isRecovered ? 'bg-emerald-50 text-emerald-600' :
+                        isException ? 'bg-rose-50 text-rose-600' : 'bg-blue-50 text-blue-600'
+                      }`}>
+                        {isRecovered ? <IconCheckCircle className="w-3.5 h-3.5" /> :
+                         isException ? <IconAlertTriangle className="w-3.5 h-3.5" /> :
+                         <IconZap className="w-3.5 h-3.5" />}
                       </div>
 
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <span className="text-2xs text-slate-500 capitalize truncate">
-                          {t.recovery_action ? t.recovery_action.replace(/_/g, ' ') : t.status}
-                        </span>
-                        <span className="text-2xs text-slate-300">•</span>
-                        <span className={`text-2xs font-semibold ${
-                          isRecovered ? 'text-emerald-700' : isException ? 'text-rose-700' : 'text-blue-700'
-                        }`}>
-                          {isRecovered ? 'Recovered' : isException ? 'Exception' : 'Dispatched'}
-                        </span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-xs font-bold text-slate-800 truncate">
+                            {t.customer_name || 'Account'}
+                          </span>
+                          <span className="text-2xs font-mono font-bold text-slate-900 tabular-nums">
+                            {formatMoney(t.amount)}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-2xs text-slate-500 capitalize truncate">
+                            {t.recovery_action ? t.recovery_action.replace(/_/g, ' ') : t.status}
+                          </span>
+                          <span className="text-2xs text-slate-300">•</span>
+                          <span className={`text-2xs font-semibold ${
+                            isRecovered ? 'text-emerald-700' : isException ? 'text-rose-700' : 'text-blue-700'
+                          }`}>
+                            {isRecovered ? 'Recovered' : isException ? 'Exception' : 'Dispatched'}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>

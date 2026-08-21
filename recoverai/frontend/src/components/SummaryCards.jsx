@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { IconAlertTriangle, IconCheckCircle, IconTrendingUp, IconXCircle, IconCalendar } from './Icons.jsx';
+import { useCurrency } from '../context/CurrencyContext.jsx';
 
 /** Smooth count-up animation hook */
 const useCountUp = (target, duration = 900) => {
@@ -26,15 +27,13 @@ const useCountUp = (target, duration = 900) => {
   return value;
 };
 
-const formatINR = (n) =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
-
 const MetricCard = ({ label, value, sub, Icon, accentColor, isCurrency, isPercent, isLoading }) => {
+  const { formatMoney } = useCurrency();
   const num = typeof value === 'number' ? value : 0;
   const counted = useCountUp(num);
 
   const display = isLoading ? null
-    : isCurrency ? formatINR(counted)
+    : isCurrency ? formatMoney(counted)
     : isPercent  ? `${value.toFixed(1)}%`
     : counted.toLocaleString('en-IN');
 

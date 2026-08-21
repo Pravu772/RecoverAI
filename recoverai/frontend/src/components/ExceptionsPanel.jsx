@@ -1,4 +1,5 @@
 import { IconAlertTriangle, IconXCircle, IconUser, IconShield, IconChevronRight, reasonIcon } from './Icons.jsx';
+import { useCurrency } from '../context/CurrencyContext.jsx';
 
 const EXCEPTION_META = {
   exception:           { Icon: IconAlertTriangle, label: 'Low AI Confidence', dotColor: '#d97706' },
@@ -6,9 +7,6 @@ const EXCEPTION_META = {
   pending_human:       { Icon: IconUser,           label: 'Pending Human Review', dotColor: '#c2410c' },
   opted_out:           { Icon: IconShield,         label: 'Customer Opted Out', dotColor: '#64748b' },
 };
-
-const formatINR = (n) =>
-  new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
 
 const STATUS_BADGE = {
   exception:           'badge-exception',
@@ -18,6 +16,7 @@ const STATUS_BADGE = {
 };
 
 const ExceptionsPanel = ({ transactions, onRowClick }) => {
+  const { formatMoney } = useCurrency();
   const exceptions = transactions.filter(t =>
     ['exception', 'max_retries_reached', 'pending_human', 'opted_out'].includes(t.status)
   );
@@ -109,7 +108,7 @@ const ExceptionsPanel = ({ transactions, onRowClick }) => {
                     {txn.transaction_id}
                   </span>
                   <span className="font-semibold text-sm flex-shrink-0">
-                    {formatINR(txn.amount)}
+                    {formatMoney(txn.amount)}
                   </span>
                 </div>
 
