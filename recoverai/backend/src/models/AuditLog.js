@@ -64,6 +64,18 @@ const auditLogSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.Mixed,
       default: {},
     },
+
+    // Cryptographic Provenance Hash Chaining (Tamper-Evident Ledger)
+    prev_hash: {
+      type: String,
+      default: 'GENESIS_BLOCK_00000000000000000000000000000000000000000000000000000000',
+    },
+
+    entry_hash: {
+      type: String,
+      default: null,
+      index: true,
+    },
   },
   {
     timestamps: { createdAt: 'timestamp', updatedAt: false },

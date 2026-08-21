@@ -13,6 +13,11 @@ const recoveryRoutes = require('./src/routes/recovery');
 const auditRoutes = require('./src/routes/audit');
 const dashboardRoutes = require('./src/routes/dashboard');
 const simulateRoutes = require('./src/routes/simulate');
+const webhookRoutes = require('./src/routes/webhooks');
+
+// ── Enterprise Middlewares ───────────────────────────────────────────────────
+const { correlation } = require('./src/middleware/correlation');
+const { idempotency } = require('./src/middleware/idempotency');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -24,21 +29,28 @@ connectDB().then(() => {
 
 // ── Middleware ────────────────────────────────────────────────────────────────
 
+// Distributed tracing correlation ID
+app.use(correlation);
+
 // CORS — allow frontend dev server
 app.use(cors({
   origin: ['http://localhost:5173', 'http://localhost:3000'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Idempotency-Key', 'X-Correlation-ID', 'X-Gateway-Signature'],
+  exposedHeaders: ['Idempotency-Key', 'X-Correlation-ID', 'X-Cache-Lookup'],
 }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Cryptographic idempotency protection on all mutating routes
+app.use('/api', idempotency);
+
 // Rate limiting — production-readiness signal
-// General API limiter: 100 requests per minute per IP
+// General API limiter: 120 requests per minute per IP
 const generalLimiter = rateLimit({
   windowMs: 60 * 1000,   // 1 minute
-  max: 100,
+  max: 120,
   message: { error: 'Too many requests, please slow down.' },
   standardHeaders: true,
   legacyHeaders: false,
@@ -47,8 +59,8 @@ const generalLimiter = rateLimit({
 // Stricter limiter for batch operations (expensive AI calls)
 const batchLimiter = rateLimit({
   windowMs: 60 * 1000,   // 1 minute
-  max: 10,
-  message: { error: 'Batch operations are rate-limited to 10/min.' },
+  max: 15,
+  message: { error: 'Batch operations are rate-limited to 15/min.' },
   standardHeaders: true,
   legacyHeaders: false,
 });
@@ -64,6 +76,7 @@ app.use('/api/transactions', recoveryRoutes);   // recover routes share /api/tra
 app.use('/api/audit', auditRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/simulate', simulateRoutes);
+app.use('/api/webhooks', webhookRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

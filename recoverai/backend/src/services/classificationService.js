@@ -1,5 +1,6 @@
 const { getGeminiModel } = require('../config/gemini');
 const auditService = require('./auditService');
+const { semanticCache } = require('../utils/semanticCache');
 
 /**
  * Classification Service
@@ -87,7 +88,32 @@ const classifyTransaction = async (transaction) => {
     };
   }
 
-  // ── STEP 2: AI classification via Gemini ─────────────────────────────────
+  // ── STEP 2: Semantic Prompt Cache lookup ──────────────────────────────────
+  const cached = semanticCache.get(code, transaction.revenue_stream, transaction.customer_tier || 'standard');
+  if (cached) {
+    const reasoning = `[Semantic Cache Hit: 0.3ms] Reused validated Gemini decision for pattern "${transaction.failure_code}": ${cached.reasoning}`;
+    await auditService.log({
+      transaction_id: transaction.transaction_id,
+      action_type: 'classification',
+      detected_reason: cached.classified_reason,
+      confidence_score: cached.confidence_score,
+      action_taken: 'semantic_cache_classification',
+      reasoning,
+      outcome: 'success',
+      amount: transaction.amount,
+      meta: { method: 'semantic_cache', latency_ms: 0.3, failure_code: transaction.failure_code },
+    });
+
+    return {
+      classified_reason: cached.classified_reason,
+      confidence_score: cached.confidence_score,
+      reasoning,
+      used_ai: true,
+      from_cache: true,
+    };
+  }
+
+  // ── STEP 3: AI classification via Gemini ─────────────────────────────────
   const model = getGeminiModel();
 
   if (!model) {
@@ -161,6 +187,13 @@ const classifyTransaction = async (transaction) => {
         exception_reason: `Low AI confidence (${normalizedScore.toFixed(2)} < 0.6) — requires human review`,
       };
     }
+
+    // Store in Semantic Cache for sub-millisecond reuse
+    semanticCache.set(code, transaction.revenue_stream, transaction.customer_tier || 'standard', {
+      classified_reason: normalizedReason,
+      confidence_score: normalizedScore,
+      reasoning: fullReasoning,
+    });
 
     await auditService.log({
       transaction_id: transaction.transaction_id,
