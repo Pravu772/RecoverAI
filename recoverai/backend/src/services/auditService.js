@@ -1,5 +1,6 @@
 const AuditLog = require('../models/AuditLog');
 const crypto = require('crypto');
+const { sseBroadcaster } = require('../utils/sseBroadcaster');
 
 const computeHash = (prevHash, timestamp, transactionId, actionType, actionTaken, outcome, amount) => {
   const payload = `${prevHash}|${timestamp}|${transactionId}|${actionType}|${actionTaken || 'none'}|${outcome}|${amount || 0}`;
@@ -46,6 +47,10 @@ const log = async (entry) => {
     });
 
     await auditEntry.save();
+
+    // Broadcast in real-time to active SSE connections
+    sseBroadcaster.broadcast('audit_event', auditEntry);
+
     return auditEntry;
   } catch (err) {
     console.error(`[AuditService] Audit log write failed for ${entry.transaction_id}:`, err.message);

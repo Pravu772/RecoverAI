@@ -13,11 +13,13 @@ import CommandPaletteModal    from '../components/CommandPaletteModal.jsx';
 import FailureInjectionModal  from '../components/FailureInjectionModal.jsx';
 import PolicyTuningModal      from '../components/PolicyTuningModal.jsx';
 import CFODigestModal         from '../components/CFODigestModal.jsx';
+import WorkspaceRBACModal     from '../components/WorkspaceRBACModal.jsx';
+import PolicyFlowVisualizerModal from '../components/PolicyFlowVisualizerModal.jsx';
 import ToastContainer         from '../components/ToastContainer.jsx';
 import {
   IconRefreshCw, IconList, IconAlertTriangle, IconBarChart2,
   IconZap, IconShoppingCart, IconRepeat, IconFileText, IconCalendar, IconLayers,
-  IconSearch, IconShield, IconPlay
+  IconSearch, IconShield, IconPlay, IconUser, IconActivity
 } from '../components/Icons.jsx';
 
 const TABS = [
@@ -47,12 +49,18 @@ const Dashboard = () => {
   const [toasts,           setToasts]           = useState([]);
   const [currency,         setCurrency]         = useState('INR');
 
+  // Multi-Tenant RBAC State
+  const [currentTenant,    setCurrentTenant]    = useState({ id: 'MER_SWIGGY', name: 'Swiggy Food & Instamart', tier: 'Enterprise Tier-1', logoText: 'SW' });
+  const [currentRole,      setCurrentRole]      = useState({ id: 'cfo', label: 'Finance CFO / VP Finance' });
+
   // Modals state
   const [complianceOpen,   setComplianceOpen]   = useState(false);
   const [paletteOpen,      setPaletteOpen]      = useState(false);
   const [injectionOpen,    setInjectionOpen]    = useState(false);
   const [policyOpen,       setPolicyOpen]       = useState(false);
   const [cfoOpen,          setCfoOpen]          = useState(false);
+  const [rbacOpen,         setRbacOpen]         = useState(false);
+  const [flowOpen,         setFlowOpen]         = useState(false);
 
   const addToast = (title, message, type = 'info') => {
     const id = Date.now();
@@ -61,6 +69,33 @@ const Dashboard = () => {
       setToasts(prev => prev.filter(t => t.id !== id));
     }, 4000);
   };
+
+  // Real-Time Server-Sent Events (SSE) Listener
+  useEffect(() => {
+    let eventSource;
+    try {
+      eventSource = new EventSource('http://localhost:5000/api/stream/events');
+      eventSource.addEventListener('audit_event', (e) => {
+        try {
+          const entry = JSON.parse(e.data);
+          if (entry.action_type === 'outcome' && entry.outcome === 'success') {
+            addToast('Real-Time Recovery Succeeded', `Transaction ${entry.transaction_id.substring(0, 10)}… recovered: ₹${entry.amount || 0}`, 'success');
+          }
+        } catch (err) {}
+      });
+      eventSource.addEventListener('chaos_state_changed', (e) => {
+        try {
+          const chaos = JSON.parse(e.data);
+          addToast('Chaos State Mutation', chaos.message, chaos.is_active ? 'warning' : 'info');
+        } catch (err) {}
+      });
+    } catch (err) {
+      console.log('SSE Stream connection error:', err);
+    }
+    return () => {
+      if (eventSource) eventSource.close();
+    };
+  }, []);
 
   const refresh = useCallback(async () => {
     setLoadingTxns(true);
@@ -115,22 +150,29 @@ const Dashboard = () => {
         <div className="max-w-[1440px] mx-auto px-6 h-15 flex items-center justify-between gap-6">
 
           {/* Brand & Product Identifier */}
-          <div
-            className="flex items-center gap-3.5 flex-shrink-0 cursor-pointer"
-            onClick={() => { setSelectedStream('all'); setActiveTab('transactions'); }}
-          >
-            <img
-              src="/logo-brand.png"
-              alt="RecoverAI"
-              className="h-7 w-auto object-contain"
-            />
-            <div className="h-4 w-px bg-slate-200 hidden sm:block" />
-            <div className="hidden sm:flex items-center gap-2">
-              <span className="text-2xs font-semibold uppercase tracking-wider text-slate-500 bg-slate-100 px-2 py-0.5 rounded border border-slate-200">
-                Autonomous Revenue Recovery
-              </span>
-              <span className="text-2xs text-slate-400 font-mono">v1.4.0-prod</span>
+          <div className="flex items-center gap-3.5 flex-shrink-0">
+            <div
+              className="cursor-pointer"
+              onClick={() => { setSelectedStream('all'); setActiveTab('transactions'); }}
+            >
+              <img
+                src="/logo-brand.png"
+                alt="RecoverAI"
+                className="h-7 w-auto object-contain"
+              />
             </div>
+            <div className="h-4 w-px bg-slate-200 hidden sm:block" />
+            
+            {/* Workspace & Persona Switcher Pill */}
+            <button
+              onClick={() => setRbacOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200/80 border border-slate-200 text-2xs font-semibold text-slate-700 transition-colors cursor-pointer"
+              title="Switch Organization Workspace & RBAC Role"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className="font-bold text-slate-900">{currentTenant.name.split(' ')[0]}</span>
+              <span className="text-slate-400 font-mono">({currentRole.id.toUpperCase()})</span>
+            </button>
           </div>
 
           {/* Primary View Tabs */}
@@ -172,6 +214,16 @@ const Dashboard = () => {
 
           {/* Controls & Environment Status */}
           <div className="flex items-center gap-3 flex-shrink-0">
+            {/* Visual Logic Flow Graph Button */}
+            <button
+              onClick={() => setFlowOpen(true)}
+              className="hidden lg:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-2xs font-semibold transition-all shadow-2xs"
+              title="View Decision Routing Flow Tree"
+            >
+              <IconLayers className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Decision Flow</span>
+            </button>
+
             {/* Simulate Custom Failure Button */}
             <button
               onClick={() => setInjectionOpen(true)}
@@ -376,6 +428,28 @@ const Dashboard = () => {
         onClose={() => setCfoOpen(false)}
         summary={summary}
         transactions={transactions}
+      />
+
+      {/* ── Multi-Tenant RBAC Modal ─────────────────────────────────────────── */}
+      <WorkspaceRBACModal
+        isOpen={rbacOpen}
+        onClose={() => setRbacOpen(false)}
+        currentTenant={currentTenant}
+        currentRole={currentRole}
+        onSelectTenant={(t) => {
+          setCurrentTenant(t);
+          addToast('Workspace Switched', `Active organization set to: ${t.name}`, 'info');
+        }}
+        onSelectRole={(r) => {
+          setCurrentRole(r);
+          addToast('Permissions Updated', `Active persona: ${r.label}`, 'info');
+        }}
+      />
+
+      {/* ── Policy Flow Visualizer Modal ────────────────────────────────────── */}
+      <PolicyFlowVisualizerModal
+        isOpen={flowOpen}
+        onClose={() => setFlowOpen(false)}
       />
 
       {/* ── Toast Notifications Stack ──────────────────────────────────────── */}

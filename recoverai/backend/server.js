@@ -14,6 +14,9 @@ const auditRoutes = require('./src/routes/audit');
 const dashboardRoutes = require('./src/routes/dashboard');
 const simulateRoutes = require('./src/routes/simulate');
 const webhookRoutes = require('./src/routes/webhooks');
+const streamRoutes = require('./src/routes/stream');
+const chaosRoutes = require('./src/routes/chaos');
+const apiKeyRoutes = require('./src/routes/apiKeys');
 
 // ── Enterprise Middlewares ───────────────────────────────────────────────────
 const { correlation } = require('./src/middleware/correlation');
@@ -77,6 +80,9 @@ app.use('/api/audit', auditRoutes);
 app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/simulate', simulateRoutes);
 app.use('/api/webhooks', webhookRoutes);
+app.use('/api/stream', streamRoutes);
+app.use('/api/chaos', chaosRoutes);
+app.use('/api/keys', apiKeyRoutes);
 
 // Health check
 app.get('/health', (req, res) => {
