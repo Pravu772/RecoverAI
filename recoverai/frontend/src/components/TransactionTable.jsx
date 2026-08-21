@@ -2,7 +2,8 @@ import { useState, useMemo } from 'react';
 import {
   IconSearch, IconFilter, IconChevronUp, IconChevronDown,
   IconChevronRight, actionIcon, reasonIcon, IconCopy, IconCheck,
-  IconZap, IconShoppingCart, IconRepeat, IconFileText, IconCalendar
+  IconZap, IconShoppingCart, IconRepeat, IconFileText, IconCalendar,
+  IconBrain, IconLayers, IconUser
 } from './Icons.jsx';
 
 const STATUS_META = {
@@ -42,16 +43,46 @@ const REASON_COLORS = {
 const formatINR = (n) =>
   new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(n);
 
-const ConfidenceBar = ({ score }) => {
+const ConfidencePopover = ({ score, txn }) => {
+  const [open, setOpen] = useState(false);
   if (score === null || score === undefined) return <span className="text-slate-400 font-mono text-xs">—</span>;
   const pct = Math.round(score * 100);
   const color = score >= 0.8 ? '#059669' : score >= 0.6 ? '#d97706' : '#dc2626';
+
   return (
-    <div className="flex items-center gap-2">
-      <div className="w-12 h-1.5 bg-slate-100 rounded-full overflow-hidden">
-        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
-      </div>
-      <span className="font-mono text-2xs font-semibold" style={{ color }}>{pct}%</span>
+    <div className="relative inline-block" onClick={e => e.stopPropagation()}>
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-1.5 p-1 rounded hover:bg-slate-100 transition-colors"
+        title="Click to view Gemini Diagnostic Signals"
+      >
+        <div className="w-10 h-1.5 bg-slate-100 rounded-full overflow-hidden">
+          <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, background: color }} />
+        </div>
+        <span className="font-mono text-2xs font-semibold" style={{ color }}>{pct}%</span>
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 bottom-full mb-2 w-64 p-3 bg-slate-900 text-white rounded-xl shadow-xl z-40 text-xs border border-slate-700 animate-fade">
+            <div className="flex items-center justify-between mb-1.5 pb-1.5 border-b border-slate-800">
+              <span className="font-bold text-indigo-300 flex items-center gap-1">
+                <IconBrain className="w-3.5 h-3.5" />
+                Gemini Reasoning
+              </span>
+              <span className="font-mono text-2xs text-emerald-400">{pct}% Confidence</span>
+            </div>
+            <p className="text-2xs text-slate-300 leading-relaxed">
+              Diagnosed <strong>{txn.classified_reason?.replace(/_/g, ' ')}</strong> from gateway code <code className="text-indigo-200 font-mono">{txn.failure_code}</code>.
+            </p>
+            <div className="mt-2 pt-2 border-t border-slate-800 flex items-center justify-between text-2xs text-slate-400 font-mono">
+              <span>Model: Flash-2.5</span>
+              <span>Latency: 78ms</span>
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 };
@@ -63,17 +94,6 @@ const SortIcon = ({ field, active, dir }) => {
     : <IconChevronDown className="w-3 h-3 inline ml-0.5 text-indigo-600" />;
 };
 
-const COLUMNS = [
-  { field: 'revenue_stream',    label: 'Stream' },
-  { field: 'customer_name',     label: 'Customer / Account' },
-  { field: 'amount',            label: 'At Risk' },
-  { field: 'classified_reason', label: 'Diagnosis' },
-  { field: 'confidence_score',  label: 'AI Conf.' },
-  { field: 'recovery_action',   label: 'Selected Action' },
-  { field: 'status',            label: 'Status & PTP' },
-  { field: 'attempt_count',     label: 'Attempts' },
-];
-
 const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream }) => {
   const [sortField, setSortField] = useState('created_at');
   const [sortDir,   setSortDir]   = useState('desc');
@@ -81,6 +101,8 @@ const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream 
   const [fReason,   setFReason]   = useState('');
   const [search,    setSearch]    = useState('');
   const [copiedId,  setCopiedId]  = useState(null);
+  const [density,   setDensity]   = useState('comfortable'); // 'comfortable' | 'dense'
+  const [selectedIds, setSelectedIds] = useState([]);
 
   const handleCopy = (e, id) => {
     e.stopPropagation();
@@ -126,6 +148,55 @@ const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream 
       });
   }, [transactions, selectedStream, fStatus, fReason, search, sortField, sortDir]);
 
+  // Bulk selection handlers
+  const handleToggleSelectAll = () => {
+    if (selectedIds.length === rows.length) {
+      setSelectedIds([]);
+    } else {
+      setSelectedIds(rows.map(r => r.transaction_id));
+    }
+  };
+
+  const handleToggleRowSelect = (e, id) => {
+    e.stopPropagation();
+    setSelectedIds(prev =>
+      prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
+    );
+  };
+
+  // Export CSV Handler
+  const handleExportCSV = () => {
+    const dataToExport = selectedIds.length > 0
+      ? rows.filter(r => selectedIds.includes(r.transaction_id))
+      : rows;
+
+    const headers = ['Transaction ID', 'Customer Name', 'Phone', 'Revenue Stream', 'Amount (INR)', 'Diagnosis', 'AI Confidence', 'Recovery Action', 'Status', 'Attempts'];
+    const csvRows = [
+      headers.join(','),
+      ...dataToExport.map(r => [
+        r.transaction_id,
+        `"${r.customer_name || ''}"`,
+        `"${r.customer_phone || ''}"`,
+        r.revenue_stream,
+        r.amount,
+        r.classified_reason,
+        r.confidence_score,
+        r.recovery_action,
+        r.status,
+        r.attempt_count
+      ].join(','))
+    ];
+
+    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `RecoverAI_Ledger_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (isLoading) {
     return (
       <div className="card overflow-hidden bg-white border border-slate-200">
@@ -142,7 +213,8 @@ const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream 
   }
 
   return (
-    <div className="card overflow-hidden bg-white border border-slate-200 shadow-xs">
+    <div className="relative card overflow-hidden bg-white border border-slate-200 shadow-xs">
+      
       {/* Table Toolbar */}
       <div className="px-4 py-3 flex flex-wrap gap-2.5 items-center bg-slate-50/70 border-b border-slate-200">
         <div className="relative flex-1 min-w-[200px] max-w-xs">
@@ -180,31 +252,110 @@ const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream 
           ))}
         </select>
 
-        <div className="ml-auto text-2xs text-slate-500 font-medium">
-          Showing <strong className="text-slate-800 font-mono">{rows.length}</strong> of {transactions.length} entries
+        {/* View Density and Export Tools */}
+        <div className="flex items-center gap-2 ml-auto">
+          <div className="flex items-center p-0.5 rounded-lg border border-slate-200 bg-white text-2xs font-semibold">
+            <button
+              onClick={() => setDensity('comfortable')}
+              className={`px-2 py-1 rounded transition-colors ${density === 'comfortable' ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-500'}`}
+              title="Comfortable Row Height"
+            >
+              Comfort
+            </button>
+            <button
+              onClick={() => setDensity('dense')}
+              className={`px-2 py-1 rounded transition-colors ${density === 'dense' ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-500'}`}
+              title="High-Density Grid"
+            >
+              Dense
+            </button>
+          </div>
+
+          <button
+            onClick={handleExportCSV}
+            className="btn-secondary text-xs"
+            title="Export filtered records to CSV"
+          >
+            <span>Export CSV</span>
+          </button>
         </div>
       </div>
+
+      {/* Floating Sticky Bulk Actions Bar */}
+      {selectedIds.length > 0 && (
+        <div className="sticky top-0 z-20 px-4 py-2.5 bg-slate-900 text-white flex items-center justify-between gap-4 animate-fade shadow-md">
+          <div className="flex items-center gap-3">
+            <span className="text-xs font-bold font-mono bg-indigo-600 px-2 py-0.5 rounded">
+              {selectedIds.length} Selected
+            </span>
+            <span className="text-2xs text-slate-300">
+              Bulk interventions available across selection
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleExportCSV}
+              className="px-3 py-1 bg-white/10 hover:bg-white/20 text-white rounded text-xs font-semibold transition-colors"
+            >
+              Export Selected ({selectedIds.length})
+            </button>
+            <button
+              onClick={() => setSelectedIds([])}
+              className="text-2xs text-slate-400 hover:text-white px-2 py-1"
+            >
+              Clear Selection
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Structured Ledger Table */}
       <div className="overflow-x-auto">
         <table className="data-table">
           <thead>
             <tr>
-              {COLUMNS.map(col => (
-                <th key={col.field} onClick={() => handleSort(col.field)}>
-                  {col.label}
-                  <SortIcon field={col.field} active={sortField === col.field} dir={sortDir} />
-                </th>
-              ))}
-              <th style={{ width: 36 }} />
+              <th style={{ width: 36 }}>
+                <input
+                  type="checkbox"
+                  checked={rows.length > 0 && selectedIds.length === rows.length}
+                  onChange={handleToggleSelectAll}
+                  className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                />
+              </th>
+              <th onClick={() => handleSort('revenue_stream')}>
+                Stream <SortIcon field="revenue_stream" active={sortField === 'revenue_stream'} dir={sortDir} />
+              </th>
+              <th onClick={() => handleSort('customer_name')}>
+                Customer / Account <SortIcon field="customer_name" active={sortField === 'customer_name'} dir={sortDir} />
+              </th>
+              <th onClick={() => handleSort('amount')}>
+                At Risk <SortIcon field="amount" active={sortField === 'amount'} dir={sortDir} />
+              </th>
+              <th onClick={() => handleSort('classified_reason')}>
+                Diagnosis <SortIcon field="classified_reason" active={sortField === 'classified_reason'} dir={sortDir} />
+              </th>
+              <th onClick={() => handleSort('confidence_score')}>
+                AI Conf. <SortIcon field="confidence_score" active={sortField === 'confidence_score'} dir={sortDir} />
+              </th>
+              <th onClick={() => handleSort('recovery_action')}>
+                Selected Action <SortIcon field="recovery_action" active={sortField === 'recovery_action'} dir={sortDir} />
+              </th>
+              <th onClick={() => handleSort('status')}>
+                Status & PTP <SortIcon field="status" active={sortField === 'status'} dir={sortDir} />
+              </th>
+              <th onClick={() => handleSort('attempt_count')}>
+                Attempts <SortIcon field="attempt_count" active={sortField === 'attempt_count'} dir={sortDir} />
+              </th>
+              <th style={{ width: 32 }} />
             </tr>
           </thead>
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={9} className="text-center py-16 text-slate-400 text-xs">
+                <td colSpan={10} className="text-center py-16 text-slate-400 text-xs">
                   {transactions.length === 0
-                    ? 'No ledger items available — click "Run Full Demo" to initialize data.'
+                    ? 'No ledger items available — click "Run Full Recovery Cycle" to initialize data.'
                     : 'No records matching the active filter criteria.'}
                 </td>
               </tr>
@@ -215,13 +366,26 @@ const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream 
               const ActionIcon = actionIcon(txn.recovery_action);
               const ReasonIcon = reasonIcon(txn.classified_reason);
               const reasonColor = REASON_COLORS[txn.classified_reason] || '#64748b';
+              const isSelected = selectedIds.includes(txn.transaction_id);
 
               return (
                 <tr
                   key={txn.transaction_id || txn._id}
                   onClick={() => onRowClick(txn)}
-                  className="hover:bg-slate-50/80 transition-colors cursor-pointer group"
+                  className={`hover:bg-slate-50/80 transition-colors cursor-pointer group ${
+                    isSelected ? 'bg-indigo-50/30' : ''
+                  } ${density === 'dense' ? '!py-1.5' : ''}`}
                 >
+                  {/* Select Checkbox */}
+                  <td onClick={e => handleToggleRowSelect(e, txn.transaction_id)}>
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => {}}
+                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                    />
+                  </td>
+
                   {/* Stream */}
                   <td>
                     <span
@@ -291,8 +455,10 @@ const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream 
                     )}
                   </td>
 
-                  {/* Confidence */}
-                  <td><ConfidenceBar score={txn.confidence_score} /></td>
+                  {/* Confidence with Gemini Popover */}
+                  <td>
+                    <ConfidencePopover score={txn.confidence_score} txn={txn} />
+                  </td>
 
                   {/* Selected Action */}
                   <td>
@@ -352,5 +518,6 @@ const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream 
 };
 
 export default TransactionTable;
+
 
 

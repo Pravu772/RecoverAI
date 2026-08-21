@@ -1,14 +1,19 @@
 import { useState, useEffect, useCallback } from 'react';
-import { getTransactions, getDashboardSummary } from '../api/index.js';
-import SummaryCards     from '../components/SummaryCards.jsx';
-import TransactionTable from '../components/TransactionTable.jsx';
-import AuditTrailDrawer from '../components/AuditTrailDrawer.jsx';
-import ExceptionsPanel  from '../components/ExceptionsPanel.jsx';
-import BatchDemoButton  from '../components/BatchDemoButton.jsx';
-import BreakdownChart   from '../components/BreakdownChart.jsx';
+import { getTransactions, getDashboardSummary, generateBatch, classifyBatch, recoverBatch, advanceTime } from '../api/index.js';
+import SummaryCards           from '../components/SummaryCards.jsx';
+import TransactionTable       from '../components/TransactionTable.jsx';
+import AuditTrailDrawer       from '../components/AuditTrailDrawer.jsx';
+import ExceptionsPanel        from '../components/ExceptionsPanel.jsx';
+import BatchDemoButton        from '../components/BatchDemoButton.jsx';
+import BreakdownChart         from '../components/BreakdownChart.jsx';
+import ExecutiveROIBanner     from '../components/ExecutiveROIBanner.jsx';
+import LiveActivityFeed       from '../components/LiveActivityFeed.jsx';
+import ComplianceRulebookModal from '../components/ComplianceRulebookModal.jsx';
+import CommandPaletteModal    from '../components/CommandPaletteModal.jsx';
 import {
   IconRefreshCw, IconList, IconAlertTriangle, IconBarChart2,
-  IconZap, IconShoppingCart, IconRepeat, IconFileText, IconCalendar, IconLayers
+  IconZap, IconShoppingCart, IconRepeat, IconFileText, IconCalendar, IconLayers,
+  IconSearch, IconShield
 } from '../components/Icons.jsx';
 
 const TABS = [
@@ -36,6 +41,10 @@ const Dashboard = () => {
   const [selectedStream,   setSelectedStream]   = useState('all');
   const [lastRefreshed,    setLastRefreshed]    = useState(null);
 
+  // Modals state
+  const [complianceOpen,   setComplianceOpen]   = useState(false);
+  const [paletteOpen,      setPaletteOpen]      = useState(false);
+
   const refresh = useCallback(async () => {
     setLoadingTxns(true);
     setLoadingSummary(true);
@@ -56,6 +65,26 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  const handleRunBatchFromPalette = async () => {
+    try {
+      await generateBatch(50);
+      await classifyBatch();
+      await recoverBatch();
+      refresh();
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleAdvanceTimeFromPalette = async () => {
+    try {
+      await advanceTime(2);
+      refresh();
+    } catch (e) {
+      console.error(e);
+    }
+  };
 
   const exceptionCount = transactions.filter(t =>
     ['exception', 'max_retries_reached', 'pending_human', 'opted_out', 'ptp_broken'].includes(t.status)
@@ -126,9 +155,19 @@ const Dashboard = () => {
 
           {/* Controls & Environment Status */}
           <div className="flex items-center gap-3 flex-shrink-0">
+            {/* Spotlight Search Shortcut Button */}
+            <button
+              onClick={() => setPaletteOpen(true)}
+              className="hidden lg:flex items-center gap-2 px-2.5 py-1.5 rounded-lg border border-slate-200 text-slate-500 hover:text-slate-900 hover:bg-slate-50 text-2xs transition-colors"
+            >
+              <IconSearch className="w-3.5 h-3.5 text-slate-400" />
+              <span>Search Actions…</span>
+              <kbd className="font-mono bg-slate-100 px-1 py-0.2 rounded border border-slate-200 text-slate-400">⌘K</kbd>
+            </button>
+
             {lastRefreshed && (
-              <span className="text-2xs text-slate-400 font-medium hidden md:inline-block">
-                Refreshed {lastRefreshed.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+              <span className="text-2xs text-slate-400 font-medium hidden xl:inline-block">
+                {lastRefreshed.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}
               </span>
             )}
 
@@ -157,11 +196,23 @@ const Dashboard = () => {
       {/* ── Main Dashboard Content ─────────────────────────────────────────── */}
       <main className="max-w-[1440px] mx-auto px-6 py-6">
 
+        {/* Priority 4: Executive ROI & Unit Economics Banner */}
+        <ExecutiveROIBanner
+          summary={summary}
+          onOpenCompliance={() => setComplianceOpen(true)}
+        />
+
         {/* Executive Overview Grid */}
         <div className="grid grid-cols-1 xl:grid-cols-[330px,1fr] gap-4 mb-6">
           <BatchDemoButton onComplete={refresh} count={50} />
           <SummaryCards summary={summary} isLoading={loadingSummary} />
         </div>
+
+        {/* Priority 1: Real-Time Live Activity Feed & Pipeline Stream */}
+        <LiveActivityFeed
+          transactions={transactions}
+          onSelectTxn={setSelectedTxn}
+        />
 
         {/* ── Risk Category & Ledger Filter Bar ───────────────────────────────── */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-4 bg-white p-2 rounded-xl border border-slate-200 shadow-xs">
@@ -246,9 +297,26 @@ const Dashboard = () => {
           onClose={() => setSelectedTxn(null)}
         />
       )}
+
+      {/* ── Compliance Rulebook Modal ───────────────────────────────────────── */}
+      <ComplianceRulebookModal
+        isOpen={complianceOpen}
+        onClose={() => setComplianceOpen(false)}
+      />
+
+      {/* ── Command Palette Modal ───────────────────────────────────────────── */}
+      <CommandPaletteModal
+        isOpen={paletteOpen}
+        onClose={setPaletteOpen}
+        onSelectStream={setSelectedStream}
+        onRunBatch={handleRunBatchFromPalette}
+        onAdvanceTime={handleAdvanceTimeFromPalette}
+        onOpenCompliance={() => setComplianceOpen(true)}
+      />
     </div>
   );
 };
 
 export default Dashboard;
+
 
