@@ -9,7 +9,7 @@
 
 ---
 
-## 🚀 Quick Start (No Docker Required)
+## 🚀 Quick Start 
 
 ### Prerequisites
 - Node.js v18+
