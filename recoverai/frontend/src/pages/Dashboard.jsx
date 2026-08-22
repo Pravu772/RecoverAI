@@ -1,24 +1,24 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getTransactions, getDashboardSummary, generateBatch, classifyBatch, recoverBatch, advanceTime } from '../api/index.js';
-import Sidebar                from '../components/Sidebar.jsx';
-import SummaryCards           from '../components/SummaryCards.jsx';
-import TransactionTable       from '../components/TransactionTable.jsx';
-import AuditTrailDrawer       from '../components/AuditTrailDrawer.jsx';
-import ExceptionsPanel        from '../components/ExceptionsPanel.jsx';
-import BatchDemoButton        from '../components/BatchDemoButton.jsx';
-import BreakdownChart         from '../components/BreakdownChart.jsx';
-import ExecutiveROIBanner     from '../components/ExecutiveROIBanner.jsx';
-import LiveActivityFeed       from '../components/LiveActivityFeed.jsx';
-import BatchReportModal       from '../components/BatchReportModal.jsx';
-import ChaosTestModal         from '../components/ChaosTestModal.jsx';
+import Sidebar from '../components/Sidebar.jsx';
+import SummaryCards from '../components/SummaryCards.jsx';
+import TransactionTable from '../components/TransactionTable.jsx';
+import AuditTrailDrawer from '../components/AuditTrailDrawer.jsx';
+import ExceptionsPanel from '../components/ExceptionsPanel.jsx';
+import BatchDemoButton from '../components/BatchDemoButton.jsx';
+import BreakdownChart from '../components/BreakdownChart.jsx';
+import ExecutiveROIBanner from '../components/ExecutiveROIBanner.jsx';
+import LiveActivityFeed from '../components/LiveActivityFeed.jsx';
+import BatchReportModal from '../components/BatchReportModal.jsx';
+import ChaosTestModal from '../components/ChaosTestModal.jsx';
 import ComplianceRulebookModal from '../components/ComplianceRulebookModal.jsx';
-import CommandPaletteModal    from '../components/CommandPaletteModal.jsx';
-import FailureInjectionModal  from '../components/FailureInjectionModal.jsx';
-import PolicyTuningModal      from '../components/PolicyTuningModal.jsx';
-import CFODigestModal         from '../components/CFODigestModal.jsx';
-import WorkspaceRBACModal     from '../components/WorkspaceRBACModal.jsx';
+import CommandPaletteModal from '../components/CommandPaletteModal.jsx';
+import FailureInjectionModal from '../components/FailureInjectionModal.jsx';
+import PolicyTuningModal from '../components/PolicyTuningModal.jsx';
+import CFODigestModal from '../components/CFODigestModal.jsx';
+import WorkspaceRBACModal from '../components/WorkspaceRBACModal.jsx';
 import PolicyFlowVisualizerModal from '../components/PolicyFlowVisualizerModal.jsx';
-import ToastContainer         from '../components/ToastContainer.jsx';
+import ToastContainer from '../components/ToastContainer.jsx';
 import {
   IconRefreshCw, IconList, IconAlertTriangle, IconBarChart2,
   IconZap, IconShoppingCart, IconRepeat, IconFileText, IconCalendar, IconLayers,
@@ -29,30 +29,30 @@ import { useCurrency } from '../context/CurrencyContext.jsx';
 
 const Dashboard = () => {
   const { currency, setCurrency } = useCurrency();
-  const [transactions,     setTransactions]     = useState([]);
-  const [summary,          setSummary]          = useState(null);
-  const [selectedTxn,      setSelectedTxn]      = useState(null);
-  const [loadingTxns,      setLoadingTxns]      = useState(false);
-  const [loadingSummary,   setLoadingSummary]   = useState(false);
-  const [activeTab,        setActiveTab]        = useState('transactions');
-  const [selectedStream,   setSelectedStream]   = useState('all');
-  const [lastRefreshed,    setLastRefreshed]    = useState(null);
-  const [toasts,           setToasts]           = useState([]);
+  const [transactions, setTransactions] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [selectedTxn, setSelectedTxn] = useState(null);
+  const [loadingTxns, setLoadingTxns] = useState(false);
+  const [loadingSummary, setLoadingSummary] = useState(false);
+  const [activeTab, setActiveTab] = useState('transactions');
+  const [selectedStream, setSelectedStream] = useState('all');
+  const [lastRefreshed, setLastRefreshed] = useState(null);
+  const [toasts, setToasts] = useState([]);
 
   // Multi-Tenant RBAC State
-  const [currentTenant,    setCurrentTenant]    = useState({ id: 'MER_SWIGGY', name: 'Swiggy Food & Instamart', tier: 'Enterprise Tier-1', logoText: 'SW' });
-  const [currentRole,      setCurrentRole]      = useState({ id: 'cfo', label: 'Finance CFO / VP Finance' });
+  const [currentTenant, setCurrentTenant] = useState({ id: 'MER_SWIGGY', name: 'Swiggy Food & Instamart', tier: 'Enterprise Tier-1', logoText: 'SW' });
+  const [currentRole, setCurrentRole] = useState({ id: 'cfo', label: 'Finance CFO / VP Finance' });
 
   // Modals state
-  const [batchReportOpen,  setBatchReportOpen]  = useState(false);
-  const [chaosOpen,        setChaosOpen]        = useState(false);
-  const [complianceOpen,   setComplianceOpen]   = useState(false);
-  const [paletteOpen,      setPaletteOpen]      = useState(false);
-  const [injectionOpen,    setInjectionOpen]    = useState(false);
-  const [policyOpen,       setPolicyOpen]       = useState(false);
-  const [cfoOpen,          setCfoOpen]          = useState(false);
-  const [rbacOpen,         setRbacOpen]         = useState(false);
-  const [flowOpen,         setFlowOpen]         = useState(false);
+  const [batchReportOpen, setBatchReportOpen] = useState(false);
+  const [chaosOpen, setChaosOpen] = useState(false);
+  const [complianceOpen, setComplianceOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
+  const [injectionOpen, setInjectionOpen] = useState(false);
+  const [policyOpen, setPolicyOpen] = useState(false);
+  const [cfoOpen, setCfoOpen] = useState(false);
+  const [rbacOpen, setRbacOpen] = useState(false);
+  const [flowOpen, setFlowOpen] = useState(false);
 
 
   const addToast = (title, message, type = 'info') => {
@@ -78,7 +78,7 @@ const Dashboard = () => {
             payload.status === 'recovered' ? 'success' : 'info'
           );
           // Non-blocking refresh
-          getDashboardSummary().then(s => setSummary(s)).catch(() => {});
+          getDashboardSummary().then(s => setSummary(s)).catch(() => { });
         }
       } catch (err) {
         console.error('SSE Message parsing error:', err);
@@ -154,12 +154,12 @@ const Dashboard = () => {
   ).length;
 
   const streamCounts = {
-    all:                  transactions.length,
-    payment_gateway:      transactions.filter(t => t.revenue_stream === 'payment_gateway').length,
+    all: transactions.length,
+    payment_gateway: transactions.filter(t => t.revenue_stream === 'payment_gateway').length,
     checkout_abandonment: transactions.filter(t => t.revenue_stream === 'checkout_abandonment').length,
     subscription_renewal: transactions.filter(t => t.revenue_stream === 'subscription_renewal').length,
-    b2b_invoice:          transactions.filter(t => t.revenue_stream === 'b2b_invoice').length,
-    ptp:                  transactions.filter(t => ['committed', 'kept', 'broken'].includes(t.ptp_status)).length,
+    b2b_invoice: transactions.filter(t => t.revenue_stream === 'b2b_invoice').length,
+    ptp: transactions.filter(t => ['committed', 'kept', 'broken'].includes(t.ptp_status)).length,
   };
 
   return (
@@ -189,14 +189,14 @@ const Dashboard = () => {
 
       {/* ── Main Workspace Area ────────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 flex flex-col min-h-screen">
-        
+
         {/* Streamlined Top Utility Header */}
         <header className="sticky top-0 z-30 glass-nav border-b border-slate-200/80 shadow-2xs h-16 px-8 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <h1 className="text-sm font-bold text-slate-900">
               {activeTab === 'transactions' ? 'Transactions & Recovery Ledger'
-               : activeTab === 'exceptions' ? 'Exception Resolution Queue'
-               : 'Revenue Recovery Analytics & Trends'}
+                : activeTab === 'exceptions' ? 'Exception Resolution Queue'
+                  : 'Revenue Recovery Analytics & Trends'}
             </h1>
             <span className="text-3xs font-mono text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200">
               {currentTenant.name}
@@ -402,9 +402,15 @@ const Dashboard = () => {
       <CFODigestModal
         isOpen={cfoOpen}
         onClose={() => setCfoOpen(false)}
+        currentTenant={currentTenant}
+        onSelectTenant={(t) => {
+          setCurrentTenant(t);
+          addToast('Workspace Switched', `CFO Briefing updated to: ${t.name}`, 'info');
+        }}
         summary={summary}
         transactions={transactions}
       />
+
 
       {/* ── Multi-Tenant RBAC Modal ─────────────────────────────────────────── */}
       <WorkspaceRBACModal

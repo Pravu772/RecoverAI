@@ -64,6 +64,8 @@ export const IconShield = icon(
 export const IconBarChart2 = icon(
   <><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></>
 );
+export const IconBarChart = IconBarChart2;
+
 
 export const IconChevronRight = icon(
   <polyline points="9 18 15 12 9 6" />
