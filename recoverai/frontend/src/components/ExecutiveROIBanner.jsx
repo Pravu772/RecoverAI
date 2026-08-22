@@ -1,83 +1,84 @@
-import { IconTrendingUp, IconShield, IconActivity, IconZap } from './Icons.jsx';
+import { IconTrendingUp, IconShield } from './Icons.jsx';
 import { useCurrency } from '../context/CurrencyContext.jsx';
 
-const ExecutiveROIBanner = ({ summary, onOpenCompliance, onOpenCFO, onOpenPolicy }) => {
+const ExecutiveROIBanner = ({ summary, onOpenCFO, onOpenPolicy }) => {
   const { formatMoney } = useCurrency();
   const s = summary || {};
   const recoveredAmount = s.total_recovered_amount || 0;
-  const recoveredCount  = s.status_breakdown?.recovered || 0;
   
   // Realistic unit economics calculation for AI compute & communication
-  // Avg ₹4 per recovery touch (WhatsApp API / SMS / Gemini Flash API token cost)
   const estimatedCost = Math.round((s.total_transactions || 0) * 4.2);
   const netSavings = Math.max(0, recoveredAmount - estimatedCost);
-  const roiMultiplier = estimatedCost > 0 ? (recoveredAmount / estimatedCost).toFixed(1) : '100+';
+  const roiMultiplier = estimatedCost > 0 ? (recoveredAmount / estimatedCost).toFixed(1) : (recoveredAmount > 0 ? '100+' : '0.0');
 
   return (
-    <div className="mb-6 p-4 rounded-2xl bg-white border border-slate-200 shadow-xs">
-      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4">
+    <div className="mb-6 p-5 rounded-2xl bg-gradient-to-r from-emerald-50/50 via-white to-white border border-emerald-200/80 border-l-4 border-l-emerald-500 shadow-xs transition-all">
+      <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
         
-        {/* Left Side: Value proposition and branding */}
-        <div className="flex items-center gap-3.5 min-w-0">
-          <div className="w-10 h-10 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700 flex-shrink-0">
-            <IconTrendingUp className="w-5 h-5" />
+        {/* Left Headline: ROI Multiplier Spotlight */}
+        <div className="flex items-center gap-4 min-w-0">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-600 text-white flex flex-col items-center justify-center flex-shrink-0 shadow-sm shadow-emerald-600/20">
+            <span className="text-2xs font-bold uppercase tracking-wider opacity-80 leading-none mb-0.5">Yield</span>
+            <span className="text-xl font-black font-mono leading-none tracking-tight">
+              {roiMultiplier}x
+            </span>
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-2xs font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
+              <span className="text-2xs font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-emerald-100/80 text-emerald-800 border border-emerald-200">
                 Executive Economics
               </span>
-              <span className="text-2xs text-slate-500 font-mono">Net Yield Multiplier: {roiMultiplier}x</span>
+              <span className="text-xs text-slate-500 font-medium">Autonomous Recovery Yield</span>
             </div>
-            <h2 className="text-sm font-bold text-slate-900 mt-0.5">
-              Autonomous Capital Recovery & Unit Economics
+            <h2 className="text-base font-bold text-slate-900 mt-1">
+              Net Capital Rescued vs. AI Ops Overhead
             </h2>
           </div>
         </div>
 
         {/* Center: Financial Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 w-full lg:w-auto pt-2 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 sm:gap-6 w-full lg:w-auto pt-3 lg:pt-0 border-t lg:border-t-0 border-slate-100">
+          <div>
+            <p className="text-2xs font-semibold text-slate-500 uppercase tracking-wider">Net Recovered</p>
+            <p className="text-xl font-bold font-mono text-emerald-600 mt-0.5">
+              {formatMoney(netSavings)}
+            </p>
+          </div>
+
           <div>
             <p className="text-2xs font-semibold text-slate-500 uppercase tracking-wider">Gross Rescued</p>
-            <p className="text-base font-bold font-mono text-emerald-600 mt-0.5">
+            <p className="text-sm font-bold font-mono text-slate-800 mt-1">
               {formatMoney(recoveredAmount)}
             </p>
           </div>
 
           <div>
             <p className="text-2xs font-semibold text-slate-500 uppercase tracking-wider">Est. AI Ops Cost</p>
-            <p className="text-base font-bold font-mono text-slate-700 mt-0.5">
+            <p className="text-sm font-bold font-mono text-slate-600 mt-1">
               {formatMoney(estimatedCost)}
             </p>
           </div>
 
           <div>
-            <p className="text-2xs font-semibold text-slate-500 uppercase tracking-wider">Net Recovered</p>
-            <p className="text-base font-bold font-mono text-indigo-700 mt-0.5">
-              {formatMoney(netSavings)}
-            </p>
-          </div>
-
-          <div>
-            <p className="text-2xs font-semibold text-slate-500 uppercase tracking-wider">Intervention Yield</p>
-            <p className="text-base font-bold font-mono text-emerald-600 mt-0.5">
+            <p className="text-2xs font-semibold text-slate-500 uppercase tracking-wider">Intervention Rate</p>
+            <p className="text-sm font-bold font-mono text-indigo-600 mt-1">
               {s.recovery_rate_percent || 0}%
             </p>
           </div>
         </div>
 
         {/* Right: Quick Actions */}
-        <div className="flex items-center gap-2 flex-shrink-0 w-full lg:w-auto">
+        <div className="flex items-center gap-2.5 flex-shrink-0 w-full lg:w-auto">
           <button
             onClick={onOpenCFO}
-            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-all flex-1 lg:flex-none shadow-2xs"
+            className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-all flex-1 lg:flex-none shadow-2xs cursor-pointer"
           >
             <span>CFO Briefing</span>
           </button>
 
           <button
             onClick={onOpenPolicy}
-            className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all flex-1 lg:flex-none shadow-2xs"
+            className="flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200 transition-all flex-1 lg:flex-none shadow-2xs cursor-pointer"
           >
             <IconShield className="w-3.5 h-3.5 text-indigo-600" />
             <span>Policy Tuner</span>

@@ -376,10 +376,22 @@ const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream 
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={10} className="text-center py-16 text-slate-400 text-xs">
-                  {transactions.length === 0
-                    ? 'No ledger items available — click "Run Full Recovery Cycle" to initialize data.'
-                    : 'No records matching the active filter criteria.'}
+                <td colSpan={10} className="text-center py-20 px-4">
+                  <div className="max-w-sm mx-auto flex flex-col items-center justify-center gap-3">
+                    <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-600 shadow-sm">
+                      <IconLayers className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-bold text-slate-900">
+                        {transactions.length === 0 ? 'No Revenue Signals Detected Yet' : 'No Records Match Filter'}
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-1">
+                        {transactions.length === 0
+                          ? 'Execute the autonomous recovery cycle to generate synthetic transactions and run Gemini AI reasoning.'
+                          : 'Try resetting your status or stream filter to inspect active ledger records.'}
+                      </p>
+                    </div>
+                  </div>
                 </td>
               </tr>
             ) : rows.map((txn, idx) => {
@@ -396,7 +408,7 @@ const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream 
                 <tr
                   key={txn.transaction_id || txn._id}
                   onClick={() => { setFocusedIndex(idx); onRowClick(txn); }}
-                  className={`hover:bg-slate-50 transition-colors cursor-pointer group ${
+                  className={`hover:bg-indigo-50/20 hover:border-l-4 hover:border-l-indigo-600 transition-all cursor-pointer group ${
                     isFocused ? 'table-row-focus bg-slate-50/90' : ''
                   } ${isSelected ? 'bg-indigo-50/40' : ''} ${density === 'dense' ? '!py-1.5' : ''}`}
                 >

@@ -53,7 +53,7 @@ const StepDot = ({ step, status }) => {
   );
 };
 
-const BatchDemoButton = ({ onComplete, onOpenReport, count = 50 }) => {
+const BatchDemoButton = ({ onComplete, onOpenReport, count = 50, isInitialEmpty = false }) => {
   const [running,      setRunning]      = useState(false);
   const [statuses,     setStatuses]     = useState({ generate: 'idle', classify: 'idle', recover: 'idle' });
   const [message,      setMessage]      = useState('');
@@ -123,7 +123,24 @@ const BatchDemoButton = ({ onComplete, onOpenReport, count = 50 }) => {
   const allDone = Object.values(statuses).every(s => s === 'done');
 
   return (
-    <div className="card p-5 flex flex-col gap-4 bg-white border border-slate-200 shadow-xs">
+    <div className={`card p-5 flex flex-col justify-between gap-4 bg-white border transition-all ${
+      isInitialEmpty
+        ? 'ring-2 ring-indigo-500/60 shadow-lg shadow-indigo-500/10 border-indigo-300'
+        : 'border-slate-200 shadow-xs'
+    }`}>
+      {/* Onboarding Starter Banner */}
+      {isInitialEmpty && (
+        <div className="p-2.5 rounded-xl bg-indigo-50/80 border border-indigo-200 text-indigo-950 text-xs flex items-center gap-2">
+          <span className="flex h-2 w-2 relative flex-shrink-0">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75" />
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-600" />
+          </span>
+          <span className="font-medium leading-snug">
+            <strong>Start Here:</strong> Run the autonomous recovery cycle to generate synthetic risk items and execute AI interventions.
+          </span>
+        </div>
+      )}
+
       {/* Title */}
       <div className="flex items-center justify-between gap-4">
         <div className="flex items-center gap-2.5">
@@ -141,7 +158,7 @@ const BatchDemoButton = ({ onComplete, onOpenReport, count = 50 }) => {
         {onOpenReport && (
           <button
             onClick={onOpenReport}
-            className="text-3xs font-mono font-bold uppercase tracking-wider px-2 py-1 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors cursor-pointer"
+            className="text-2xs font-mono font-bold uppercase tracking-wider px-2.5 py-1 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors cursor-pointer"
             title="Inspect comprehensive batch recovery results report"
           >
             Batch Report ↗

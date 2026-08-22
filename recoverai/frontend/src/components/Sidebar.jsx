@@ -93,16 +93,18 @@ const Sidebar = ({
         </div>
 
         {/* ── Navigation Sections (Scrollable) ───────────────────────────────── */}
-        <div className="p-2.5 space-y-5 overflow-y-auto max-h-[calc(100vh-140px)]">
+        <div className="p-3 space-y-6 overflow-y-auto max-h-[calc(100vh-140px)]">
           
           {/* Main Ledger Section */}
           <div>
-            {!isCollapsed && (
-              <p className="px-2 mb-1.5 text-3xs font-bold uppercase tracking-wider text-slate-400">
+            {!isCollapsed ? (
+              <p className="px-2 mb-2 text-2xs font-bold uppercase tracking-wider text-slate-400">
                 Platform Ledger
               </p>
+            ) : (
+              <div className="w-8 h-[1px] bg-slate-200 mx-auto mb-2" />
             )}
-            <nav className="space-y-0.5">
+            <nav className="space-y-1">
               {MAIN_NAV.map(item => {
                 const { Icon } = item;
                 const isActive = activeTab === item.id;
@@ -116,7 +118,7 @@ const Sidebar = ({
                     onClick={() => setActiveTab(item.id)}
                     title={isCollapsed ? `${item.label} (${count || 0})` : undefined}
                     className={`w-full flex items-center ${
-                      isCollapsed ? 'justify-center p-2.5' : 'justify-between px-2.5 py-2'
+                      isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2.5'
                     } rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                       isActive
                         ? 'bg-indigo-50 text-indigo-900 font-bold border border-indigo-200 shadow-2xs'
@@ -128,14 +130,13 @@ const Sidebar = ({
                       {!isCollapsed && <span className="truncate">{item.label}</span>}
                     </div>
                     {!isCollapsed && count !== null && (
-                      <span className={`text-2xs font-mono px-1.5 py-0.2 rounded-full tabular-nums ${
+                      <span className={`text-2xs font-mono px-2 py-0.5 rounded-full tabular-nums ${
                         isActive ? 'bg-indigo-200/60 text-indigo-900 font-bold' : 'bg-slate-100 text-slate-500'
                       }`}>
                         {count}
                       </span>
                     )}
                   </button>
-
                 );
               })}
             </nav>
@@ -143,12 +144,14 @@ const Sidebar = ({
 
           {/* Risk Revenue Streams */}
           <div>
-            {!isCollapsed && (
-              <p className="px-2 mb-1.5 text-3xs font-bold uppercase tracking-wider text-slate-400">
+            {!isCollapsed ? (
+              <p className="px-2 mb-2 text-2xs font-bold uppercase tracking-wider text-slate-400">
                 Risk Streams
               </p>
+            ) : (
+              <div className="w-8 h-[1px] bg-slate-200 mx-auto my-3" />
             )}
-            <nav className="space-y-0.5">
+            <nav className="space-y-1">
               {STREAM_NAV.map(item => {
                 const { Icon } = item;
                 const isSelected = selectedStream === item.id && activeTab === 'transactions';
@@ -160,7 +163,7 @@ const Sidebar = ({
                     onClick={() => { setSelectedStream(item.id); setActiveTab('transactions'); }}
                     title={isCollapsed ? `${item.label} (${count})` : undefined}
                     className={`w-full flex items-center ${
-                      isCollapsed ? 'justify-center p-2.5' : 'justify-between px-2.5 py-1.5'
+                      isCollapsed ? 'justify-center p-2.5' : 'justify-between px-3 py-2'
                     } rounded-lg text-xs font-medium transition-all cursor-pointer ${
                       isSelected
                         ? 'bg-indigo-50 text-indigo-900 font-bold border border-indigo-200/80 shadow-2xs'
@@ -172,8 +175,8 @@ const Sidebar = ({
                       {!isCollapsed && <span className="truncate">{item.label}</span>}
                     </div>
                     {!isCollapsed && (
-                      <span className={`text-3xs font-mono px-1.5 py-0.2 rounded-full ${
-                        isSelected ? 'bg-indigo-200/60 text-indigo-900' : 'text-slate-400'
+                      <span className={`text-2xs font-mono px-1.5 py-0.2 rounded-full ${
+                        isSelected ? 'bg-indigo-200/60 text-indigo-900 font-semibold' : 'text-slate-400'
                       }`}>
                         {count}
                       </span>
@@ -184,78 +187,21 @@ const Sidebar = ({
             </nav>
           </div>
 
-          {/* AI & Diagnostics Sandbox */}
+          {/* Governance & Diagnostics Tools */}
           <div>
-            {!isCollapsed && (
-              <p className="px-2 mb-1.5 text-3xs font-bold uppercase tracking-wider text-slate-400">
-                Verification & Resilience
+            {!isCollapsed ? (
+              <p className="px-2 mb-2 text-2xs font-bold uppercase tracking-wider text-slate-400">
+                Governance & Diagnostics
               </p>
+            ) : (
+              <div className="w-8 h-[1px] bg-slate-200 mx-auto my-3" />
             )}
-            <nav className="space-y-0.5">
-              {onOpenBatchReport && (
-                <button
-                  onClick={onOpenBatchReport}
-                  title={isCollapsed ? 'Batch Results Report' : undefined}
-                  className={`w-full flex items-center ${
-                    isCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-2.5 py-1.5'
-                  } rounded-lg text-xs font-semibold text-indigo-700 hover:bg-indigo-50 transition-colors cursor-pointer`}
-                >
-                  <IconActivity className="w-3.5 h-3.5 text-indigo-600 flex-shrink-0" />
-                  {!isCollapsed && <span>Batch Results Report (P1)</span>}
-                </button>
-              )}
-
-              {onOpenChaos && (
-                <button
-                  onClick={onOpenChaos}
-                  title={isCollapsed ? 'Chaos & Outage Drill' : undefined}
-                  className={`w-full flex items-center ${
-                    isCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-2.5 py-1.5'
-                  } rounded-lg text-xs font-semibold text-amber-800 hover:bg-amber-50 transition-colors cursor-pointer`}
-                >
-                  <IconZap className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
-                  {!isCollapsed && <span>Chaos & Outage Drill (P2)</span>}
-                </button>
-              )}
-
-              <button
-                onClick={onOpenFlow}
-                title={isCollapsed ? 'Decision Flow Tree' : undefined}
-                className={`w-full flex items-center ${
-                  isCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-2.5 py-1.5'
-                } rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer`}
-              >
-                <IconLayers className="w-3.5 h-3.5 text-indigo-600 flex-shrink-0" />
-                {!isCollapsed && <span>Decision Flow Tree</span>}
-              </button>
-
-              <button
-                onClick={onOpenInjection}
-                title={isCollapsed ? 'Custom Sandbox Injection' : undefined}
-                className={`w-full flex items-center ${
-                  isCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-2.5 py-1.5'
-                } rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer`}
-              >
-                <IconShield className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
-                {!isCollapsed && <span>Sandbox Injection</span>}
-              </button>
-            </nav>
-          </div>
-
-
-          {/* Governance & CFO Section */}
-          <div>
-            {!isCollapsed && (
-              <p className="px-2 mb-1.5 text-3xs font-bold uppercase tracking-wider text-slate-400">
-                Governance
-              </p>
-            )}
-            <nav className="space-y-0.5">
+            <nav className="space-y-1">
               <button
                 onClick={onOpenCFO}
                 title={isCollapsed ? 'CFO Revenue Digest' : undefined}
                 className={`w-full flex items-center ${
-                  isCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-2.5 py-1.5'
+                  isCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2'
                 } rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer`}
               >
                 <IconFileText className="w-3.5 h-3.5 text-indigo-600 flex-shrink-0" />
@@ -266,7 +212,7 @@ const Sidebar = ({
                 onClick={onOpenPolicy}
                 title={isCollapsed ? 'Policy Tuner' : undefined}
                 className={`w-full flex items-center ${
-                  isCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-2.5 py-1.5'
+                  isCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2'
                 } rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer`}
               >
                 <IconShield className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
@@ -274,13 +220,35 @@ const Sidebar = ({
               </button>
 
               <button
+                onClick={onOpenFlow}
+                title={isCollapsed ? 'Decision Flow Tree' : undefined}
+                className={`w-full flex items-center ${
+                  isCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2'
+                } rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer`}
+              >
+                <IconLayers className="w-3.5 h-3.5 text-indigo-600 flex-shrink-0" />
+                {!isCollapsed && <span>Decision Flow Tree</span>}
+              </button>
+
+              <button
+                onClick={onOpenInjection}
+                title={isCollapsed ? 'Custom Sandbox Injection' : undefined}
+                className={`w-full flex items-center ${
+                  isCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2'
+                } rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer`}
+              >
+                <IconShield className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                {!isCollapsed && <span>Sandbox Injection</span>}
+              </button>
+
+              <button
                 onClick={onOpenCompliance}
                 title={isCollapsed ? 'Compliance Rulebook' : undefined}
                 className={`w-full flex items-center ${
-                  isCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-2.5 py-1.5'
+                  isCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-3 py-2'
                 } rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer`}
               >
-                <IconShield className="w-3.5 h-3.5 text-slate-500 flex-shrink-0" />
+                <IconShield className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" />
                 {!isCollapsed && <span>Compliance Rulebook</span>}
               </button>
             </nav>
