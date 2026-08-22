@@ -157,6 +157,17 @@ app.use('/api/stream', streamRoutes);
 app.use('/api/chaos', chaosRoutes);
 app.use('/api/keys', apiKeyRoutes);
 
+// Fallback aliases for clients calling directly without /api prefix
+app.use('/transactions', transactionRoutes);
+app.use('/transactions', recoveryRoutes);
+app.use('/audit', auditRoutes);
+app.use('/dashboard', dashboardRoutes);
+app.use('/simulate', simulateRoutes);
+app.use('/webhooks', webhookRoutes);
+app.use('/stream', streamRoutes);
+app.use('/keys', apiKeyRoutes);
+
+
 // Root route — public service info
 app.get('/', (req, res) => {
   res.json({

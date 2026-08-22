@@ -1,13 +1,14 @@
 import axios from 'axios';
 
-// Support production backend URL on Render via VITE_API_BASE_URL env var
-// Dev fallback: http://localhost:5000/api
-const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+// Robust normalization of backend URL:
+// Handles both "https://domain.onrender.com" and "https://domain.onrender.com/api" seamlessly
+const rawBase = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api').trim();
+const cleanOrigin = rawBase.replace(/\/api\/?$/i, '').replace(/\/+$/, '');
+const BASE_URL = cleanOrigin ? `${cleanOrigin}/api` : 'http://localhost:5000/api';
 
 // Derive SSE Stream endpoint URL
 export const getStreamUrl = () => {
-  const root = BASE_URL.replace(/\/api\/?$/, '');
-  return `${root}/api/stream/events`;
+  return `${cleanOrigin || 'http://localhost:5000'}/api/stream/events`;
 };
 
 // FIX #3 — Send the internal API token on every request.
