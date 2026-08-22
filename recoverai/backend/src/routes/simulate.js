@@ -68,6 +68,81 @@ router.post('/advance-time', async (req, res) => {
   });
 });
 
+const { chaosEngine } = require('../utils/chaosEngine');
+const { geminiCircuitBreaker } = require('../utils/circuitBreaker');
+
+/**
+ * POST /api/simulate/inject-failure
+ * Injects a controlled failure scenario (Priority 2):
+ * Accepts failure_type: "gemini_api_down" | "database_timeout" | "invalid_transaction_data"
+ */
+router.post('/inject-failure', async (req, res) => {
+  const { failure_type = 'gemini_api_down' } = req.body;
+
+  const validTypes = ['gemini_api_down', 'database_timeout', 'invalid_transaction_data'];
+  if (!validTypes.includes(failure_type)) {
+    return res.status(400).json({
+      error: `Invalid failure_type "${failure_type}". Valid types: ${validTypes.join(', ')}`,
+    });
+  }
+
+  if (failure_type === 'gemini_api_down') {
+    chaosEngine.armNextFailure('gemini_api_down');
+    // Also trip breaker threshold immediately to demonstrate circuit breaker state
+    geminiCircuitBreaker.trip('Injected Gemini API Outage Drill');
+
+    return res.json({
+      success: true,
+      failure_type: 'gemini_api_down',
+      message: 'Gemini API outage simulated. Next AI classification will trip the circuit breaker and gracefully fall back to rule-based classification.',
+      circuit_breaker: geminiCircuitBreaker.getStatus(),
+      chaos_engine: chaosEngine.getStatus(),
+    });
+  }
+
+  if (failure_type === 'database_timeout') {
+    chaosEngine.armNextFailure('database_timeout');
+    return res.json({
+      success: true,
+      failure_type: 'database_timeout',
+      message: 'Database timeout simulated. Operations will enforce timeout guard and record exception to audit trail.',
+      chaos_engine: chaosEngine.getStatus(),
+    });
+  }
+
+  if (failure_type === 'invalid_transaction_data') {
+    // Generate an invalid transaction and demonstrate validation guard
+    const invalidTxn = new Transaction({
+      transaction_id: `TXN_INVALID_${Date.now()}`,
+      merchant_id: 'MER_CHAOS_TEST',
+      amount: -500, // Invalid negative amount
+      customer_id: 'CUST_CORRUPT',
+      failure_code: '', // Missing failure code
+    });
+
+    const validationError = invalidTxn.validateSync();
+    await auditService.log({
+      transaction_id: invalidTxn.transaction_id,
+      action_type: 'exception',
+      detected_reason: 'invalid_data_schema',
+      confidence_score: 0,
+      action_taken: 'schema_validation_rejection',
+      reasoning: `Payload validation rejected: Negative amount (-500) and missing failure code. Gracefully quarantined without pipeline crash.`,
+      outcome: 'failure',
+      amount: 0,
+      meta: { validation_error: validationError ? validationError.message : 'Invalid schema' },
+    });
+
+    return res.json({
+      success: true,
+      failure_type: 'invalid_transaction_data',
+      message: 'Corrupt transaction quarantined gracefully. Logged validation exception in audit trail.',
+      quarantined_transaction_id: invalidTxn.transaction_id,
+      validation_error: validationError ? validationError.message : null,
+    });
+  }
+});
+
 /**
  * POST /api/simulate/reset-time
  */
@@ -91,5 +166,20 @@ router.get('/time', (req, res) => {
   });
 });
 
+/**
+ * GET /api/simulate/chaos-status
+ */
+router.get('/chaos-status', (req, res) => {
+  res.json({
+    status: 'ACTIVE',
+    chaos_engine: chaosEngine.getStatus(),
+    circuit_breaker: geminiCircuitBreaker.getStatus(),
+  });
+});
+
 module.exports = router;
+
+
+
+
 

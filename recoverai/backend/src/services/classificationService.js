@@ -1,14 +1,17 @@
 const { getGeminiModel } = require('../config/gemini');
 const auditService = require('./auditService');
 const { semanticCache } = require('../utils/semanticCache');
+const { geminiCircuitBreaker } = require('../utils/circuitBreaker');
+const { chaosEngine } = require('../utils/chaosEngine');
 
 /**
  * Classification Service
  *
  * Hybrid approach:
  *  1. Rule-based fast path — known failure codes → instant classification (confidence 1.0)
- *  2. AI path — ambiguous/unknown codes → Gemini JSON-mode structured output
- *  3. Fallback — if AI confidence < 0.6 OR API error → mark as exception
+ *  2. Semantic Cache — cached LLM decisions → sub-millisecond retrieval
+ *  3. Gemini AI with Circuit Breaker — ambiguous/unknown codes → structured JSON with automated fallback
+ *  4. Fallback — if AI confidence < 0.6 OR API error → fallback / exception logged to audit ledger
  */
 
 // ── Rule-based classification map ────────────────────────────────────────────
@@ -91,7 +94,8 @@ const classifyTransaction = async (transaction) => {
   // ── STEP 2: Semantic Prompt Cache lookup ──────────────────────────────────
   const cached = semanticCache.get(code, transaction.revenue_stream, transaction.customer_tier || 'standard');
   if (cached) {
-    const reasoning = `[Semantic Cache Hit: 0.3ms] Reused validated Gemini decision for pattern "${transaction.failure_code}": ${cached.reasoning}`;
+    const latency = cached.cache_hit_latency_ms || 0.1;
+    const reasoning = `[Semantic Cache Hit: ${latency}ms] Reused validated Gemini decision for pattern "${transaction.failure_code}": ${cached.reasoning}`;
     await auditService.log({
       transaction_id: transaction.transaction_id,
       action_type: 'classification',
@@ -101,7 +105,7 @@ const classifyTransaction = async (transaction) => {
       reasoning,
       outcome: 'success',
       amount: transaction.amount,
-      meta: { method: 'semantic_cache', latency_ms: 0.3, failure_code: transaction.failure_code },
+      meta: { method: 'semantic_cache', latency_ms: latency, failure_code: transaction.failure_code },
     });
 
     return {
@@ -110,10 +114,11 @@ const classifyTransaction = async (transaction) => {
       reasoning,
       used_ai: true,
       from_cache: true,
+      latency_ms: latency,
     };
   }
 
-  // ── STEP 3: AI classification via Gemini ─────────────────────────────────
+  // ── STEP 3: AI classification via Gemini (Protected by Circuit Breaker) ──
   const model = getGeminiModel();
 
   if (!model) {
@@ -141,7 +146,58 @@ const classifyTransaction = async (transaction) => {
     };
   }
 
-  try {
+  // Fallback function when Circuit Breaker is OPEN or Gemini API fails
+  const runRuleBasedFallback = async (triggerError) => {
+    const upperCode = (transaction.failure_code || '').toUpperCase();
+    let fallbackReason = 'bank_timeout';
+    if (upperCode.includes('FUNDS') || upperCode.includes('BAL') || upperCode.includes('LIMIT')) {
+      fallbackReason = 'insufficient_funds';
+    } else if (upperCode.includes('EXPIRE') || upperCode.includes('CARD')) {
+      fallbackReason = 'card_expired';
+    } else if (upperCode.includes('MANDATE') || upperCode.includes('NACH') || upperCode.includes('SUB')) {
+      fallbackReason = 'mandate_expired';
+    } else if (upperCode.includes('DROP') || upperCode.includes('OTP') || upperCode.includes('POPUP')) {
+      fallbackReason = 'checkout_hesitation';
+    } else if (transaction.revenue_stream === 'b2b_invoice') {
+      fallbackReason = 'invoice_overdue_30d';
+    } else if (transaction.revenue_stream === 'checkout_abandonment') {
+      fallbackReason = 'checkout_hesitation';
+    }
+
+    const fallbackReasoning = `Gemini API unavailable, falling back to rule-based classification per circuit breaker policy: mapped code "${transaction.failure_code}" to "${fallbackReason}"`;
+
+    await auditService.log({
+      transaction_id: transaction.transaction_id,
+      action_type: 'classification',
+      detected_reason: fallbackReason,
+      confidence_score: 0.85,
+      action_taken: 'circuit_breaker_fallback_classification',
+      reasoning: fallbackReasoning,
+      outcome: 'success',
+      amount: transaction.amount,
+      meta: {
+        method: 'circuit_breaker_fallback',
+        original_error: triggerError.message,
+        failure_code: transaction.failure_code,
+        circuit_breaker_state: geminiCircuitBreaker.state,
+      },
+    });
+
+    return {
+      classified_reason: fallbackReason,
+      confidence_score: 0.85,
+      reasoning: fallbackReasoning,
+      used_ai: false,
+      circuit_breaker_fallback: true,
+    };
+  };
+
+  return await geminiCircuitBreaker.execute(async () => {
+    // Check chaos injection for AI outage simulation
+    if (chaosEngine.shouldSimulateAIOutage()) {
+      throw new Error('Simulated Gemini API 503 Service Unavailable (Chaos Injected)');
+    }
+
     const prompt = buildClassificationPrompt(transaction);
     const result = await model.generateContent(prompt);
     const responseText = result.response.text();
@@ -213,33 +269,9 @@ const classifyTransaction = async (transaction) => {
       reasoning: fullReasoning,
       used_ai: true,
     };
-  } catch (apiError) {
-    console.error(`Gemini API error for ${transaction.transaction_id}:`, apiError.message);
-
-    const reasoning = `AI classification failed for failure_code "${transaction.failure_code}": ${apiError.message}. Flagged as exception.`;
-
-    await auditService.log({
-      transaction_id: transaction.transaction_id,
-      action_type: 'exception',
-      detected_reason: 'unknown',
-      confidence_score: 0,
-      action_taken: 'none',
-      reasoning,
-      outcome: 'failure',
-      amount: transaction.amount,
-      meta: { method: 'ai_error', error: apiError.message, failure_code: transaction.failure_code },
-    });
-
-    return {
-      classified_reason: 'unknown',
-      confidence_score: 0,
-      reasoning,
-      used_ai: true,
-      is_exception: true,
-      exception_reason: `Gemini API error: ${apiError.message}`,
-    };
-  }
+  }, runRuleBasedFallback);
 };
+
 
 /**
  * Builds the structured classification prompt for Gemini.

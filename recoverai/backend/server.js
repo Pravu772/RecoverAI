@@ -115,8 +115,11 @@ app.use((req, res) => {
 });
 
 // ── Start server ──────────────────────────────────────────────────────────────
-app.listen(PORT, () => {
-  console.log(`RecoverAI backend running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    console.log(`RecoverAI backend running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
+  });
+}
 
 module.exports = app;
+

@@ -9,6 +9,8 @@ import BatchDemoButton        from '../components/BatchDemoButton.jsx';
 import BreakdownChart         from '../components/BreakdownChart.jsx';
 import ExecutiveROIBanner     from '../components/ExecutiveROIBanner.jsx';
 import LiveActivityFeed       from '../components/LiveActivityFeed.jsx';
+import BatchReportModal       from '../components/BatchReportModal.jsx';
+import ChaosTestModal         from '../components/ChaosTestModal.jsx';
 import ComplianceRulebookModal from '../components/ComplianceRulebookModal.jsx';
 import CommandPaletteModal    from '../components/CommandPaletteModal.jsx';
 import FailureInjectionModal  from '../components/FailureInjectionModal.jsx';
@@ -20,7 +22,7 @@ import ToastContainer         from '../components/ToastContainer.jsx';
 import {
   IconRefreshCw, IconList, IconAlertTriangle, IconBarChart2,
   IconZap, IconShoppingCart, IconRepeat, IconFileText, IconCalendar, IconLayers,
-  IconSearch, IconShield, IconPlay, IconUser, IconActivity
+  IconSearch, IconShield, IconPlay, IconUser, IconActivity, IconTrendingUp
 } from '../components/Icons.jsx';
 
 import { useCurrency } from '../context/CurrencyContext.jsx';
@@ -42,6 +44,8 @@ const Dashboard = () => {
   const [currentRole,      setCurrentRole]      = useState({ id: 'cfo', label: 'Finance CFO / VP Finance' });
 
   // Modals state
+  const [batchReportOpen,  setBatchReportOpen]  = useState(false);
+  const [chaosOpen,        setChaosOpen]        = useState(false);
   const [complianceOpen,   setComplianceOpen]   = useState(false);
   const [paletteOpen,      setPaletteOpen]      = useState(false);
   const [injectionOpen,    setInjectionOpen]    = useState(false);
@@ -49,6 +53,7 @@ const Dashboard = () => {
   const [cfoOpen,          setCfoOpen]          = useState(false);
   const [rbacOpen,         setRbacOpen]         = useState(false);
   const [flowOpen,         setFlowOpen]         = useState(false);
+
 
   const addToast = (title, message, type = 'info') => {
     const id = Date.now() + Math.random();
@@ -88,36 +93,41 @@ const Dashboard = () => {
   const fetchTransactions = useCallback(async () => {
     setLoadingTxns(true);
     try {
-      const data = await getTransactions(selectedStream);
-      setTransactions(Array.isArray(data) ? data : data?.transactions || []);
+      const data = await getTransactions({ limit: 200 });
+      const list = Array.isArray(data) ? data : data?.transactions || [];
+      setTransactions(list);
       setLastRefreshed(new Date());
+      return list;
     } catch (e) {
       console.error('Failed to fetch transactions:', e);
+      return [];
     } finally {
       setLoadingTxns(false);
     }
-  }, [selectedStream]);
+  }, []);
 
   const fetchSummary = useCallback(async () => {
     setLoadingSummary(true);
     try {
       const data = await getDashboardSummary();
       setSummary(data);
+      return data;
     } catch (e) {
       console.error('Failed to fetch summary:', e);
+      return null;
     } finally {
       setLoadingSummary(false);
     }
   }, []);
 
-  const refresh = useCallback(() => {
-    fetchTransactions();
-    fetchSummary();
+  const refresh = useCallback(async () => {
+    return await Promise.allSettled([fetchTransactions(), fetchSummary()]);
   }, [fetchTransactions, fetchSummary]);
 
   useEffect(() => {
     refresh();
   }, [refresh]);
+
 
   const handleRunBatch = async () => {
     try {
@@ -172,7 +182,10 @@ const Dashboard = () => {
         onOpenCFO={() => setCfoOpen(true)}
         onOpenPolicy={() => setPolicyOpen(true)}
         onOpenCompliance={() => setComplianceOpen(true)}
+        onOpenBatchReport={() => setBatchReportOpen(true)}
+        onOpenChaos={() => setChaosOpen(true)}
       />
+
 
       {/* ── Main Workspace Area ────────────────────────────────────────────── */}
       <div className="flex-1 min-w-0 flex flex-col min-h-screen">
@@ -191,6 +204,26 @@ const Dashboard = () => {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Priority 1 & 2 Hero Demo Actions */}
+            <button
+              onClick={() => setChaosOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-amber-300 bg-amber-50 hover:bg-amber-100 text-amber-900 text-2xs font-bold transition-all shadow-2xs cursor-pointer"
+              title="Test self-healing circuit breaker & graceful outage fallback"
+            >
+              <IconZap className="w-3.5 h-3.5 text-amber-600" />
+              <span>Chaos Test</span>
+            </button>
+
+
+            <button
+              onClick={() => setBatchReportOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-900 text-2xs font-bold transition-all shadow-2xs cursor-pointer"
+              title="Open full batch test results module (Priority 1)"
+            >
+              <IconTrendingUp className="w-3.5 h-3.5 text-indigo-600" />
+              <span>Batch Report</span>
+            </button>
+
             {/* Spotlight Search */}
             <button
               onClick={() => setPaletteOpen(true)}
@@ -248,7 +281,11 @@ const Dashboard = () => {
 
           {/* Executive Overview Grid */}
           <div className="grid grid-cols-1 xl:grid-cols-[330px,1fr] gap-4">
-            <BatchDemoButton onComplete={refresh} count={50} />
+            <BatchDemoButton
+              onComplete={refresh}
+              onOpenReport={() => setBatchReportOpen(true)}
+              count={50}
+            />
             <SummaryCards summary={summary} isLoading={loadingSummary} />
           </div>
 
@@ -299,6 +336,24 @@ const Dashboard = () => {
           </footer>
         </main>
       </div>
+
+      {/* ── Batch Test Results Hero Modal (Priority 1) ─────────────────────── */}
+      <BatchReportModal
+        isOpen={batchReportOpen}
+        onClose={() => setBatchReportOpen(false)}
+        onSelectTxn={setSelectedTxn}
+      />
+
+      {/* ── Graceful Failure / Chaos Test Modal (Priority 2) ────────────────── */}
+      <ChaosTestModal
+        isOpen={chaosOpen}
+        onClose={() => setChaosOpen(false)}
+        onSelectTxn={setSelectedTxn}
+        onSuccess={() => {
+          refresh();
+          addToast('Chaos Test Completed', 'Simulated Gemini API outage gracefully handled by circuit breaker fallback.', 'success');
+        }}
+      />
 
       {/* ── Audit & Diagnostic Drawer ──────────────────────────────────────── */}
       {selectedTxn && (
@@ -383,3 +438,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+

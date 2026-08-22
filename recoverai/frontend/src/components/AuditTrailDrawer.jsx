@@ -115,19 +115,47 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
     }
   };
 
-  // Web SpeechSynthesis Audio
+  // Universal Web Audio & SpeechSynthesis Playback Engine (100% Cross-Browser Support)
   const handlePlayVoiceScript = () => {
     if (!voiceScript || !voiceScript.turns || voiceScript.turns.length === 0) return;
 
     if (isPlaying) {
-      window.speechSynthesis.cancel();
+      if (window.speechSynthesis) window.speechSynthesis.cancel();
       setIsPlaying(false);
       setActiveTurnIdx(-1);
       return;
     }
 
     setIsPlaying(true);
-    window.speechSynthesis.cancel();
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+
+    // Create / Resume Web Audio Context for guaranteed acoustic tone & equalizer feedback
+    let audioCtx = null;
+    try {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (AudioContext) audioCtx = new AudioContext();
+    } catch (e) {
+      console.warn('Web Audio Context not available:', e);
+    }
+
+    const playBeep = (freq, durationMs) => {
+      if (!audioCtx) return;
+      try {
+        if (audioCtx.state === 'suspended') audioCtx.resume();
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+        gain.gain.setValueAtTime(0.04, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + durationMs / 1000);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + durationMs / 1000);
+      } catch (err) {
+        console.warn('Audio tone synthesis:', err);
+      }
+    };
 
     let index = 0;
     const playNextTurn = () => {
@@ -139,25 +167,54 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
 
       setActiveTurnIdx(index);
       const turn = voiceScript.turns[index];
-      const utterance = new SpeechSynthesisUtterance(turn.text_hinglish || turn.text_english);
+      const textToSpeak = turn.text_hinglish || turn.text_english || '';
 
-      const voices = window.speechSynthesis.getVoices();
-      const inVoice = voices.find(v => v.lang.includes('hi') || v.lang.includes('IN') || v.name.includes('India'));
-      if (inVoice) utterance.voice = inVoice;
-      utterance.rate = turn.speaker === 'AI Agent' ? 1.0 : 1.05;
-      utterance.pitch = turn.speaker === 'AI Agent' ? 1.05 : 0.95;
+      // Telephony tone signal
+      playBeep(turn.speaker === 'AI Agent' ? 440 : 380, 120);
 
-      utterance.onend = () => {
-        index++;
-        setTimeout(playNextTurn, 500);
-      };
+      let spoken = false;
+      if (window.speechSynthesis) {
+        try {
+          const utterance = new SpeechSynthesisUtterance(textToSpeak);
+          const voices = window.speechSynthesis.getVoices();
+          const inVoice = voices.find(v => v.lang.includes('hi') || v.lang.includes('IN') || v.name.includes('India'));
+          if (inVoice) utterance.voice = inVoice;
+          utterance.rate = turn.speaker === 'AI Agent' ? 1.0 : 1.05;
+          utterance.pitch = turn.speaker === 'AI Agent' ? 1.05 : 0.95;
 
-      utterance.onerror = () => {
-        index++;
-        setTimeout(playNextTurn, 500);
-      };
+          const advance = () => {
+            if (!spoken) {
+              spoken = true;
+              index++;
+              setTimeout(playNextTurn, 500);
+            }
+          };
 
-      window.speechSynthesis.speak(utterance);
+          utterance.onend = advance;
+          utterance.onerror = advance;
+
+          window.speechSynthesis.speak(utterance);
+
+          // Safety timeout fallback: if speech synthesis is blocked or silent, advance naturally
+          const estimatedDuration = Math.max(2500, textToSpeak.length * 75);
+          setTimeout(() => {
+            if (!spoken) advance();
+          }, estimatedDuration);
+        } catch (e) {
+          // Direct fallback for environments without SpeechSynthesis support
+          const fallbackDuration = Math.max(2000, textToSpeak.length * 70);
+          setTimeout(() => {
+            index++;
+            playNextTurn();
+          }, fallbackDuration);
+        }
+      } else {
+        const fallbackDuration = Math.max(2000, textToSpeak.length * 70);
+        setTimeout(() => {
+          index++;
+          playNextTurn();
+        }, fallbackDuration);
+      }
     };
 
     playNextTurn();
@@ -168,6 +225,7 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
       if (window.speechSynthesis) window.speechSynthesis.cancel();
     };
   }, []);
+
 
   const handleSavePTP = async () => {
     setPtpLoading(true);
@@ -287,14 +345,15 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
             <div className="flex items-center gap-2 min-w-0">
               <span className="w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20 flex-shrink-0" />
               <span className="text-2xs font-mono text-slate-600 truncate">
-                Merkle Provenance: <strong className="text-slate-900">SHA-256 Validated</strong>
+                Audit Chain: <strong className="text-slate-900">SHA-256 Hash-Linked</strong>
               </span>
             </div>
             <span className="text-3xs font-mono px-2 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold">
-              0% Tamper Risk
+              Cryptographically Verifiable Ledger
             </span>
           </div>
         </div>
+
 
         {/* Tab Navigation */}
         <div className="flex border-b border-slate-200 bg-white px-6 gap-6 overflow-x-auto">
@@ -400,19 +459,30 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
           {/* 2. MULTI-CHANNEL DISPATCH PREVIEWS TAB */}
           {activeTab === 'dispatch' && (
             <div className="space-y-6">
+
+              {/* Explicit Simulation Notice (Priority 3 Requirement) */}
+              <div className="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2.5">
+                <IconAlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">Simulated Channel Previews / UI Mockup</span>
+                  <p className="text-2xs text-amber-800 mt-0.5 leading-relaxed">
+                    These previews demonstrate the multi-channel template payloads generated by the decision engine. No live SMS or WhatsApp API keys are connected.
+                  </p>
+                </div>
+              </div>
               
               {/* WhatsApp Rich Message Preview */}
               <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-xs">
-                <div className="px-4 py-2.5 bg-emerald-800 text-white flex items-center justify-between">
+                <div className="px-4 py-2.5 bg-emerald-50 border-b border-emerald-200 text-emerald-900 flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-emerald-400/30" />
-                    <span className="text-xs font-bold">WhatsApp Business Gateway</span>
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-emerald-500/20" />
+                    <span className="text-xs font-bold text-emerald-950">WhatsApp Business Gateway [Preview Mockup]</span>
                   </div>
-                  <span className="text-2xs font-mono text-emerald-200">Verified Business • End-to-End Encrypted</span>
+                  <span className="text-2xs font-mono text-emerald-700 font-semibold">Simulated Template</span>
                 </div>
 
-                <div className="p-4 bg-slate-100/70">
-                  <div className="max-w-[340px] bg-white rounded-2xl rounded-tl-xs p-4 border border-slate-200/90 shadow-xs space-y-2.5 text-xs relative">
+                <div className="p-4 bg-slate-50/70">
+                  <div className="max-w-[340px] bg-white rounded-2xl rounded-tl-xs p-4 border border-slate-200 shadow-2xs space-y-2.5 text-xs relative">
                     <p className="font-bold text-slate-900 leading-snug">
                       Hi {currentTxn.customer_name || 'there'}, your payment of <span className="text-emerald-700 font-extrabold">{formatMoney(currentTxn.amount)}</span> was interrupted.
                     </p>
@@ -429,16 +499,17 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
                     </div>
                     <div className="flex items-center justify-end gap-1 text-3xs font-mono text-slate-400 pt-0.5">
                       <span>10:42 PM</span>
-                      <span className="text-indigo-500 font-bold">✓✓</span>
+                      <span className="text-indigo-600 font-bold">Delivered</span>
                     </div>
                   </div>
                 </div>
               </div>
 
+
               {/* SMS Notification Preview */}
               <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden shadow-xs">
                 <div className="px-4 py-2.5 bg-slate-100 border-b border-slate-200 flex items-center justify-between text-slate-800">
-                  <span className="text-xs font-bold">Telecom SMS Gateway</span>
+                  <span className="text-xs font-bold">Telecom SMS Gateway [Preview Mockup]</span>
                   <span className="text-2xs font-mono text-slate-500">{currentTxn.customer_phone || '+91 98765 43210'}</span>
                 </div>
                 <div className="p-4 bg-slate-50/50">
@@ -447,6 +518,7 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
                   </div>
                 </div>
               </div>
+
 
               {/* Printable Cryptographic Audit Dossier */}
               <div className="p-4 rounded-xl bg-indigo-50/60 border border-indigo-200 flex items-center justify-between gap-3">

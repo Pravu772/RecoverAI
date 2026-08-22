@@ -24,17 +24,16 @@ const verifyWebhookSignature = (req, res, next) => {
     .update(payload)
     .digest('hex');
 
-  // Constant-time string comparison to prevent timing attacks
-  const isMatch = crypto.timingSafeEqual(
-    Buffer.from(signature, 'utf8'),
-    Buffer.from(expectedSignature, 'utf8')
-  );
+  const sigBuf = Buffer.from(signature, 'utf8');
+  const expBuf = Buffer.from(expectedSignature, 'utf8');
 
-  if (!isMatch) {
+  // Constant-time string comparison with byte-length safety check
+  if (sigBuf.length !== expBuf.length || !crypto.timingSafeEqual(sigBuf, expBuf)) {
     return res.status(401).json({
       error: 'Invalid webhook signature. Request rejected as unauthorized.',
     });
   }
+
 
   next();
 };

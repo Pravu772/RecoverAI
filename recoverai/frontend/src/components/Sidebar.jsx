@@ -36,6 +36,8 @@ const Sidebar = ({
   onOpenCFO,
   onOpenPolicy,
   onOpenCompliance,
+  onOpenBatchReport,
+  onOpenChaos,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
@@ -117,22 +119,23 @@ const Sidebar = ({
                       isCollapsed ? 'justify-center p-2.5' : 'justify-between px-2.5 py-2'
                     } rounded-xl text-xs font-semibold transition-all cursor-pointer ${
                       isActive
-                        ? 'bg-slate-900 text-white shadow-xs'
+                        ? 'bg-indigo-50 text-indigo-900 font-bold border border-indigo-200 shadow-2xs'
                         : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100/80'
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                      <Icon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-indigo-600' : 'text-slate-400'}`} />
                       {!isCollapsed && <span className="truncate">{item.label}</span>}
                     </div>
                     {!isCollapsed && count !== null && (
                       <span className={`text-2xs font-mono px-1.5 py-0.2 rounded-full tabular-nums ${
-                        isActive ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-500'
+                        isActive ? 'bg-indigo-200/60 text-indigo-900 font-bold' : 'bg-slate-100 text-slate-500'
                       }`}>
                         {count}
                       </span>
                     )}
                   </button>
+
                 );
               })}
             </nav>
@@ -185,10 +188,36 @@ const Sidebar = ({
           <div>
             {!isCollapsed && (
               <p className="px-2 mb-1.5 text-3xs font-bold uppercase tracking-wider text-slate-400">
-                Diagnostics
+                Verification & Resilience
               </p>
             )}
             <nav className="space-y-0.5">
+              {onOpenBatchReport && (
+                <button
+                  onClick={onOpenBatchReport}
+                  title={isCollapsed ? 'Batch Results Report' : undefined}
+                  className={`w-full flex items-center ${
+                    isCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-2.5 py-1.5'
+                  } rounded-lg text-xs font-semibold text-indigo-700 hover:bg-indigo-50 transition-colors cursor-pointer`}
+                >
+                  <IconActivity className="w-3.5 h-3.5 text-indigo-600 flex-shrink-0" />
+                  {!isCollapsed && <span>Batch Results Report (P1)</span>}
+                </button>
+              )}
+
+              {onOpenChaos && (
+                <button
+                  onClick={onOpenChaos}
+                  title={isCollapsed ? 'Chaos & Outage Drill' : undefined}
+                  className={`w-full flex items-center ${
+                    isCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-2.5 py-1.5'
+                  } rounded-lg text-xs font-semibold text-amber-800 hover:bg-amber-50 transition-colors cursor-pointer`}
+                >
+                  <IconZap className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
+                  {!isCollapsed && <span>Chaos & Outage Drill (P2)</span>}
+                </button>
+              )}
+
               <button
                 onClick={onOpenFlow}
                 title={isCollapsed ? 'Decision Flow Tree' : undefined}
@@ -202,16 +231,17 @@ const Sidebar = ({
 
               <button
                 onClick={onOpenInjection}
-                title={isCollapsed ? 'Simulate Gateway Drop' : undefined}
+                title={isCollapsed ? 'Custom Sandbox Injection' : undefined}
                 className={`w-full flex items-center ${
                   isCollapsed ? 'justify-center p-2.5' : 'gap-2.5 px-2.5 py-1.5'
                 } rounded-lg text-xs font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-50 transition-colors cursor-pointer`}
               >
-                <IconZap className="w-3.5 h-3.5 text-amber-600 flex-shrink-0" />
-                {!isCollapsed && <span>Simulate Gateway Drop</span>}
+                <IconShield className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />
+                {!isCollapsed && <span>Sandbox Injection</span>}
               </button>
             </nav>
           </div>
+
 
           {/* Governance & CFO Section */}
           <div>

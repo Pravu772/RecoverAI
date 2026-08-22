@@ -52,7 +52,7 @@ const StepDot = ({ step, status }) => {
   );
 };
 
-const BatchDemoButton = ({ onComplete, count = 50 }) => {
+const BatchDemoButton = ({ onComplete, onOpenReport, count = 50 }) => {
   const [running,      setRunning]      = useState(false);
   const [statuses,     setStatuses]     = useState({ generate: 'idle', classify: 'idle', recover: 'idle' });
   const [message,      setMessage]      = useState('');
@@ -84,7 +84,14 @@ const BatchDemoButton = ({ onComplete, count = 50 }) => {
 
       setResult(r.summary);
       setMessage('');
-      onComplete?.();
+      if (onComplete) {
+        await onComplete();
+      }
+      // Automatically open the Batch Report modal as hero result
+      if (onOpenReport) {
+        setTimeout(() => onOpenReport(), 400);
+      }
+
     } catch (e) {
       setError(e.message);
       setStatuses(p => {
@@ -129,6 +136,16 @@ const BatchDemoButton = ({ onComplete, count = 50 }) => {
             </p>
           </div>
         </div>
+
+        {onOpenReport && (
+          <button
+            onClick={onOpenReport}
+            className="text-3xs font-mono font-bold uppercase tracking-wider px-2 py-1 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-colors cursor-pointer"
+            title="Inspect comprehensive batch recovery results report"
+          >
+            Batch Report ↗
+          </button>
+        )}
       </div>
 
       {/* Step indicators */}
@@ -170,7 +187,17 @@ const BatchDemoButton = ({ onComplete, count = 50 }) => {
       {/* Success summary */}
       {result && !running && (
         <div className="px-4 py-3 rounded-xl bg-emerald-50 border border-emerald-200">
-          <p className="text-xs font-bold mb-2 text-emerald-800">Execution Batch Complete</p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-bold text-emerald-800">Execution Batch Complete</p>
+            {onOpenReport && (
+              <button
+                onClick={onOpenReport}
+                className="text-2xs font-bold text-emerald-800 hover:underline cursor-pointer"
+              >
+                View Full Batch Report →
+              </button>
+            )}
+          </div>
           <div className="grid grid-cols-3 gap-2">
             {[
               { label: 'Processed', value: result.total_processed },
@@ -227,5 +254,6 @@ const BatchDemoButton = ({ onComplete, count = 50 }) => {
     </div>
   );
 };
+
 
 export default BatchDemoButton;

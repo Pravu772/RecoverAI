@@ -45,35 +45,68 @@ const SectionHeader = ({ children }) => (
   </p>
 );
 
-const BreakdownChart = ({ breakdown }) => {
-  if (!breakdown || Object.keys(breakdown).length === 0) {
+const BreakdownChart = ({ breakdown, summary, transactions = [] }) => {
+  // Derive effective breakdown from explicit breakdown, summary, or directly from transactions array
+  let effectiveBreakdown = breakdown || summary?.breakdown_by_reason;
+
+  if (!effectiveBreakdown || Object.keys(effectiveBreakdown).length === 0) {
+    if (transactions && transactions.length > 0) {
+      effectiveBreakdown = {};
+      for (const t of transactions) {
+        const r = t.classified_reason || (t.status === 'failed' ? 'pending_classification' : 'unknown');
+        if (!effectiveBreakdown[r]) {
+          effectiveBreakdown[r] = {
+            total: 0,
+            recovered: 0,
+            amount_at_risk: 0,
+            amount_recovered: 0,
+            recovery_rate: 0,
+          };
+        }
+        effectiveBreakdown[r].total += 1;
+        effectiveBreakdown[r].amount_at_risk += (t.amount || 0);
+        if (t.status === 'recovered') {
+          effectiveBreakdown[r].recovered += 1;
+          effectiveBreakdown[r].amount_recovered += (t.amount || 0);
+        }
+      }
+      for (const r of Object.keys(effectiveBreakdown)) {
+        const item = effectiveBreakdown[r];
+        item.recovery_rate = item.total > 0 ? parseFloat(((item.recovered / item.total) * 100).toFixed(1)) : 0;
+      }
+    }
+  }
+
+  if (!effectiveBreakdown || Object.keys(effectiveBreakdown).length === 0) {
     return (
-      <div className="card p-12 flex items-center justify-center text-xs text-slate-400 h-64 bg-white border border-slate-200">
-        No ledger analytics available — run the demo to generate metrics.
+      <div className="card p-12 flex flex-col items-center justify-center text-center gap-2 h-64 bg-white border border-slate-200">
+        <p className="text-xs font-semibold text-slate-700">No ledger analytics available</p>
+        <p className="text-2xs text-slate-400">Click "Run Full Recovery Cycle" to generate and analyze metrics across all 4 streams.</p>
       </div>
     );
   }
 
-  const barData = Object.entries(breakdown)
+  const barData = Object.entries(effectiveBreakdown)
     .filter(([, v]) => v.total > 0)
     .map(([reason, v]) => ({
-      name: REASON_CONFIG[reason]?.label || reason,
+      name: REASON_CONFIG[reason]?.label || reason.replace(/_/g, ' '),
       reason,
       'At Risk': v.amount_at_risk,
       'Recovered': v.amount_recovered,
     }));
 
-  const donutData = Object.entries(breakdown)
+  const donutData = Object.entries(effectiveBreakdown)
     .filter(([, v]) => v.total > 0)
     .map(([reason, v]) => ({
-      name: REASON_CONFIG[reason]?.label || reason,
+      name: REASON_CONFIG[reason]?.label || reason.replace(/_/g, ' '),
       value: v.total,
       color: REASON_CONFIG[reason]?.color || '#94a3b8',
     }));
 
-  const rateData = Object.entries(breakdown)
+  const rateData = Object.entries(effectiveBreakdown)
     .filter(([, v]) => v.total > 0)
     .sort((a, b) => b[1].recovery_rate - a[1].recovery_rate);
+
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">

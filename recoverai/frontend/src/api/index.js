@@ -35,8 +35,13 @@ export const recoverBatch = () =>
 export const recoverOne = (id) =>
   api.post(`/transactions/${id}/recover`).then(r => r.data);
 
-export const getTransactions = (params = {}) =>
-  api.get('/transactions', { params }).then(r => r.data);
+export const getTransactions = (params = {}) => {
+  const queryParams = typeof params === 'string'
+    ? (params === 'all' ? { limit: 200 } : { stream: params, limit: 200 })
+    : { limit: 200, ...params };
+  return api.get('/transactions', { params: queryParams }).then(r => r.data);
+};
+
 
 // ── Voice AI & PTP endpoints ──────────────────────────────────────────────────
 
@@ -54,12 +59,15 @@ export const updatePTPStatus = (id, status) =>
 export const getAuditTrail = (transactionId) =>
   api.get(`/audit/${transactionId}`).then(r => r.data);
 
-// ── Dashboard ─────────────────────────────────────────────────────────────────
+// ── Dashboard & Batch Report ──────────────────────────────────────────────────
 
 export const getDashboardSummary = () =>
   api.get('/dashboard/summary').then(r => r.data);
 
-// ── Simulate time ─────────────────────────────────────────────────────────────
+export const getBatchReport = () =>
+  api.get('/dashboard/batch-report').then(r => r.data);
+
+// ── Simulate time & Chaos Resilience ──────────────────────────────────────────
 
 export const advanceTime = (days = 2) =>
   api.post('/simulate/advance-time', { days }).then(r => r.data);
@@ -70,5 +78,12 @@ export const resetTime = () =>
 export const getSimulatedTime = () =>
   api.get('/simulate/time').then(r => r.data);
 
+export const injectFailure = (failure_type = 'gemini_api_down') =>
+  api.post('/simulate/inject-failure', { failure_type }).then(r => r.data);
+
+export const getChaosStatus = () =>
+  api.get('/simulate/chaos-status').then(r => r.data);
+
 export default api;
+
 

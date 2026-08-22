@@ -73,15 +73,15 @@ const PolicyFlowVisualizerModal = ({ isOpen, onClose }) => {
             </div>
 
             {/* Downward Connector */}
-            <div className="flex justify-center text-slate-300 font-mono text-xs">
-              ↓ [Fast-Path Cache Lookup: 0.3ms]
+            <div className="flex justify-center text-slate-400 font-mono text-xs">
+              ↓ [Sub-Millisecond In-Memory Cache Lookup]
             </div>
 
             {/* 2. Hybrid Classification Layer */}
             <div className="p-3.5 rounded-xl bg-white border border-slate-200 shadow-2xs">
               <div className="flex items-center justify-between">
                 <span className="text-2xs font-bold uppercase tracking-wider text-slate-500">Stage 2: Hybrid AI Diagnostics</span>
-                <span className="text-2xs font-mono text-emerald-600 bg-emerald-50 px-2 py-0.2 rounded">Zero-Latency Fallback</span>
+                <span className="text-2xs font-mono text-emerald-700 bg-emerald-50 px-2 py-0.2 rounded border border-emerald-200">Circuit-Breaker Guarded</span>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2.5">
                 <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-xs">
@@ -96,7 +96,7 @@ const PolicyFlowVisualizerModal = ({ isOpen, onClose }) => {
             </div>
 
             {/* Downward Connector */}
-            <div className="flex justify-center text-slate-300 font-mono text-xs">
+            <div className="flex justify-center text-slate-400 font-mono text-xs">
               ↓ [Confidence &gt;= 0.60 Gate]
             </div>
 
@@ -127,14 +127,15 @@ const PolicyFlowVisualizerModal = ({ isOpen, onClose }) => {
 
         {/* Footer */}
         <div className="px-6 py-3.5 bg-white border-t border-slate-200 flex items-center justify-between">
-          <span className="text-2xs text-slate-500 font-mono">100% Deterministic & Bounded</span>
+          <span className="text-2xs text-slate-500 font-mono">Deterministic & Bounded Invariants</span>
           <button
             onClick={onClose}
-            className="btn-primary text-xs"
+            className="btn-primary text-xs cursor-pointer"
           >
             Close Flow Graph
           </button>
         </div>
+
 
       </div>
     </div>

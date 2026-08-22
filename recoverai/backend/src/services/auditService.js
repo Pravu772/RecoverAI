@@ -69,24 +69,50 @@ const getTrail = async (transactionId) => {
 
 /**
  * Verifies cryptographic integrity of the entire audit hash chain for a transaction.
- * Returns { valid: boolean, verified_count: number, tamper_detected: boolean }
+ * Returns { valid: boolean, verified_count: number, tamper_detected: boolean, message: string }
  */
 const verifyChain = async (transactionId) => {
   const entries = await AuditLog.find({ transaction_id: transactionId }).sort({ timestamp: 1 });
   if (!entries || entries.length === 0) {
-    return { valid: true, verified_count: 0, tamper_detected: false, message: 'No entries found' };
+    return { valid: true, verified_count: 0, tamper_detected: false, message: 'No audit records found' };
   }
 
   let prevHash = 'GENESIS_BLOCK_00000000000000000000000000000000000000000000000000000000';
   for (let i = 0; i < entries.length; i++) {
     const e = entries[i];
+    
+    // 1. Verify hash chaining to previous block
     if (e.prev_hash && e.prev_hash !== prevHash) {
       return {
         valid: false,
         tamper_detected: true,
         failed_at_index: i,
         failed_entry_id: e._id,
-        message: 'Chain broken: prev_hash mismatch',
+        reason: 'prev_hash_mismatch',
+        message: `Chain broken at index ${i}: prev_hash does not match preceding entry's hash`,
+      };
+    }
+
+    // 2. Recompute and verify payload hash
+    const isoTimestamp = new Date(e.timestamp).toISOString();
+    const recomputedHash = computeHash(
+      e.prev_hash || prevHash,
+      isoTimestamp,
+      e.transaction_id,
+      e.action_type,
+      e.action_taken,
+      e.outcome || 'pending',
+      e.amount
+    );
+
+    if (e.entry_hash && recomputedHash !== e.entry_hash) {
+      return {
+        valid: false,
+        tamper_detected: true,
+        failed_at_index: i,
+        failed_entry_id: e._id,
+        reason: 'content_tampered',
+        message: `Payload hash mismatch at index ${i}: stored hash ${e.entry_hash.substring(0, 12)}... does not match recomputed hash ${recomputedHash.substring(0, 12)}...`,
       };
     }
 
@@ -100,9 +126,10 @@ const verifyChain = async (transactionId) => {
     tamper_detected: false,
     verified_count: entries.length,
     latest_block_hash: prevHash,
-    message: '100% Cryptographically Intact — Zero Tampering Detected',
+    message: 'Cryptographically verified intact (SHA-256 hash-linked)',
   };
 };
 
-module.exports = { log, getTrail, verifyChain };
+module.exports = { log, getTrail, verifyChain, computeHash };
+
 

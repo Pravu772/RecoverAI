@@ -2,22 +2,15 @@ import { IconAlertTriangle, IconXCircle, IconUser, IconShield, IconChevronRight,
 import { useCurrency } from '../context/CurrencyContext.jsx';
 
 const EXCEPTION_META = {
-  exception:           { Icon: IconAlertTriangle, label: 'Low AI Confidence', dotColor: '#d97706' },
-  max_retries_reached: { Icon: IconXCircle,       label: 'Max Retries Reached', dotColor: '#dc2626' },
-  pending_human:       { Icon: IconUser,           label: 'Pending Human Review', dotColor: '#c2410c' },
-  opted_out:           { Icon: IconShield,         label: 'Customer Opted Out', dotColor: '#64748b' },
-};
-
-const STATUS_BADGE = {
-  exception:           'badge-exception',
-  max_retries_reached: 'badge-max_retries_reached',
-  pending_human:       'badge-pending_human',
-  opted_out:           'badge-opted_out',
+  exception:           { Icon: IconAlertTriangle, label: 'Low AI Confidence', dotColor: '#d97706', bg: 'bg-amber-50 text-amber-700 border-amber-200' },
+  max_retries_reached: { Icon: IconXCircle,       label: 'Max Retries Reached', dotColor: '#dc2626', bg: 'bg-rose-50 text-rose-700 border-rose-200' },
+  pending_human:       { Icon: IconUser,           label: 'Pending Human Review', dotColor: '#c2410c', bg: 'bg-orange-50 text-orange-700 border-orange-200' },
+  opted_out:           { Icon: IconShield,         label: 'Customer Opted Out', dotColor: '#64748b', bg: 'bg-slate-100 text-slate-600 border-slate-200' },
 };
 
 const ExceptionsPanel = ({ transactions, onRowClick }) => {
   const { formatMoney } = useCurrency();
-  const exceptions = transactions.filter(t =>
+  const exceptions = (transactions || []).filter(t =>
     ['exception', 'max_retries_reached', 'pending_human', 'opted_out'].includes(t.status)
   );
 
@@ -29,19 +22,16 @@ const ExceptionsPanel = ({ transactions, onRowClick }) => {
 
   if (exceptions.length === 0) {
     return (
-      <div className="card p-10 flex flex-col items-center gap-3 text-center">
-        <div
-          className="w-11 h-11 rounded-xl p-2 flex items-center justify-center"
-          style={{ background: 'var(--color-bg)', border: '1px solid var(--color-border)' }}
-        >
+      <div className="p-12 rounded-2xl bg-white border border-slate-200 shadow-xs flex flex-col items-center gap-3 text-center">
+        <div className="w-12 h-12 rounded-2xl bg-slate-50 border border-slate-200 p-2.5 flex items-center justify-center shadow-2xs">
           <img src="/logo-icon.png" alt="RecoverAI" className="w-full h-full object-contain" />
         </div>
         <div>
-          <p className="font-semibold text-sm mb-1" style={{ color: 'var(--color-text-primary)' }}>
-            No exceptions
+          <p className="font-bold text-sm text-slate-900 mb-1">
+            Zero Active Exceptions
           </p>
-          <p className="text-xs max-w-xs" style={{ color: 'var(--color-text-muted)' }}>
-            All transactions have been handled. Generate a batch to see exceptions here.
+          <p className="text-xs text-slate-500 max-w-sm">
+            All failure signatures are within automated confidence bounds. Run a recovery batch or inject a failure scenario to test human escalation.
           </p>
         </div>
       </div>
@@ -49,25 +39,29 @@ const ExceptionsPanel = ({ transactions, onRowClick }) => {
   }
 
   return (
-    <div className="card overflow-hidden">
+    <div className="rounded-2xl bg-white border border-slate-200 shadow-xs overflow-hidden">
       {/* Header */}
-      <div
-        className="px-4 py-3 flex items-center justify-between"
-        style={{ borderBottom: '1px solid var(--color-border)', background: 'var(--color-bg)' }}
-      >
-        <div className="flex items-center gap-2">
-          <IconAlertTriangle className="w-4 h-4" style={{ color: '#d97706' }} />
-          <h3 className="text-sm font-semibold" style={{ color: 'var(--color-text-primary)' }}>
-            Exceptions — Human Review Required
-          </h3>
+      <div className="px-5 py-3.5 bg-slate-50/90 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5">
+          <div className="w-6 h-6 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center">
+            <IconAlertTriangle className="w-3.5 h-3.5" />
+          </div>
+          <div>
+            <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+              Human-in-the-Loop Escalation Queue
+            </h3>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-1.5 flex-wrap">
           {Object.entries(counts).map(([status, count]) => {
             const meta = EXCEPTION_META[status];
             if (!meta) return null;
             return (
-              <span key={status} className="text-xs px-2 py-0.5 rounded-full font-medium"
-                style={{ background: meta.dotColor + '14', color: meta.dotColor }}>
+              <span
+                key={status}
+                className={`text-2xs px-2.5 py-0.5 rounded-full font-semibold border ${meta.bg}`}
+              >
                 {meta.label}: {count}
               </span>
             );
@@ -75,70 +69,68 @@ const ExceptionsPanel = ({ transactions, onRowClick }) => {
         </div>
       </div>
 
-      {/* List */}
-      <div className="divide-y overflow-y-auto max-h-[480px]" style={{ '--tw-divide-opacity': 1, borderColor: 'var(--color-border)' }}>
+      {/* Exception Items List */}
+      <div className="divide-y divide-slate-100 max-h-[560px] overflow-y-auto">
         {exceptions.map(txn => {
-          const meta = EXCEPTION_META[txn.status];
-          if (!meta) return null;
+          const meta = EXCEPTION_META[txn.status] || EXCEPTION_META.exception;
           const { Icon } = meta;
           const ReasonIcon = reasonIcon(txn.classified_reason);
-          const badgeCls = STATUS_BADGE[txn.status] || '';
 
           return (
             <div
               key={txn.transaction_id || txn._id}
-              onClick={() => onRowClick(txn)}
-              className="px-4 py-3.5 flex items-start gap-3 cursor-pointer group transition-colors"
-              style={{ borderBottom: '1px solid var(--color-border)' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'var(--color-bg)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              onClick={() => onRowClick && onRowClick(txn)}
+              className="p-4 hover:bg-slate-50/90 transition-all cursor-pointer group flex items-start gap-4"
             >
-              {/* Icon */}
+              {/* Status Icon */}
               <div
-                className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5"
-                style={{ background: meta.dotColor + '12', color: meta.dotColor }}
+                className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-0.5"
+                style={{ background: meta.dotColor + '14', color: meta.dotColor }}
               >
                 <Icon className="w-4 h-4" />
               </div>
 
+              {/* Transaction Details */}
               <div className="flex-1 min-w-0">
-                {/* Row 1: ID + Amount */}
                 <div className="flex items-center justify-between gap-3 mb-1">
-                  <span className="font-mono text-xs truncate" style={{ color: 'var(--color-accent)' }}>
-                    {txn.transaction_id}
-                  </span>
-                  <span className="font-semibold text-sm flex-shrink-0">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="font-bold text-xs text-slate-900 truncate">
+                      {txn.customer_name || 'Account'}
+                    </span>
+                    <span className="font-mono text-2xs text-slate-400">
+                      ({(txn.transaction_id || '').substring(0, 14)}…)
+                    </span>
+                  </div>
+                  <span className="font-bold font-mono text-xs text-slate-900 tabular-nums">
                     {formatMoney(txn.amount)}
                   </span>
                 </div>
 
-                {/* Row 2: Status badge + failure code */}
-                <div className="flex items-center gap-2 mb-1.5">
-                  <span className={`badge ${badgeCls}`}>{meta.label}</span>
-                  <span className="code-chip">{txn.failure_code}</span>
+                <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                  <span className={`text-2xs font-semibold px-2 py-0.5 rounded-full border ${meta.bg}`}>
+                    {meta.label}
+                  </span>
+                  <span className="font-mono text-2xs px-1.5 py-0.2 rounded bg-slate-100 border border-slate-200 text-slate-600">
+                    {txn.failure_code}
+                  </span>
                   {txn.classified_reason && (
-                    <div className="flex items-center gap-1">
-                      <ReasonIcon className="w-3 h-3" style={{ color: 'var(--color-text-muted)' }} />
-                      <span className="text-2xs capitalize" style={{ color: 'var(--color-text-muted)' }}>
-                        {txn.classified_reason.replace(/_/g, ' ')}
-                      </span>
+                    <div className="flex items-center gap-1 text-2xs text-slate-500 capitalize">
+                      <ReasonIcon className="w-3 h-3 text-slate-400" />
+                      <span>{txn.classified_reason.replace(/_/g, ' ')}</span>
                     </div>
                   )}
                 </div>
 
-                {/* Row 3: Exception reason */}
-                <p className="text-xs leading-relaxed" style={{ color: 'var(--color-text-muted)' }}>
+                <p className="text-2xs text-slate-600 leading-relaxed">
                   {txn.exception_reason ||
-                    (txn.status === 'pending_human' && 'Requires manual re-authorization by a human agent') ||
-                    (txn.status === 'opted_out'    && `Customer ${txn.customer_id} has opted out of all recovery`) ||
-                    (txn.status === 'max_retries_reached' && `All ${txn.attempt_count} recovery attempts exhausted`)
+                    (txn.status === 'pending_human' && 'AI confidence below policy guardrail threshold (0.60) — Requires manual approval.') ||
+                    (txn.status === 'opted_out'    && `Customer ${txn.customer_id} has opted out of automated recovery touches.`) ||
+                    (txn.status === 'max_retries_reached' && `Maximum attempts (${txn.attempt_count}) reached without confirmation. Blocked by stopping rule.`)
                   }
                 </p>
               </div>
 
-              {/* Arrow */}
-              <IconChevronRight className="w-3.5 h-3.5 flex-shrink-0 mt-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                style={{ color: 'var(--color-text-muted)' }} />
+              <IconChevronRight className="w-4 h-4 text-slate-300 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all flex-shrink-0 mt-2" />
             </div>
           );
         })}

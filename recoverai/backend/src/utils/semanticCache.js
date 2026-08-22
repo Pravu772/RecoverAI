@@ -1,11 +1,12 @@
 const crypto = require('crypto');
+const { performance } = require('perf_hooks');
 
 /**
  * Gemini Semantic LRU Cache
  * 
  * Caches LLM classification decisions in-memory to:
- * 1. Reduce Gemini API token costs by ~80% on repetitive failure codes.
- * 2. Reduce classification latency from 800ms down to sub-1ms (0.3ms).
+ * 1. Reduce Gemini API token costs and rate-limit pressure on repetitive failure codes.
+ * 2. Return cached decisions in sub-millisecond lookup times (measured via performance.now()).
  */
 
 class SemanticCache {
@@ -23,6 +24,7 @@ class SemanticCache {
   }
 
   get(failureCode, revenueStream, customerTier) {
+    const startTime = performance.now();
     const key = this._generateKey(failureCode, revenueStream, customerTier);
     const item = this.cache.get(key);
 
@@ -42,12 +44,15 @@ class SemanticCache {
     this.cache.set(key, item);
     this.hits++;
 
+    const latencyMs = parseFloat((performance.now() - startTime).toFixed(3));
+
     return {
       ...item.data,
       from_cache: true,
-      cache_hit_latency_ms: 0.3,
+      cache_hit_latency_ms: latencyMs,
     };
   }
+
 
   set(failureCode, revenueStream, customerTier, data) {
     const key = this._generateKey(failureCode, revenueStream, customerTier);

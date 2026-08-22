@@ -241,8 +241,9 @@ const FailureInjectionModal = ({ isOpen, onClose, onSuccess }) => {
 
         {/* Footer Actions */}
         <div className="px-6 py-3.5 bg-white border-t border-slate-200 flex items-center justify-between">
-          <span className="text-2xs text-slate-500 font-mono">100% Real-Time Inference</span>
+          <span className="text-2xs text-slate-500 font-mono">Real-Time Ingestion & Diagnostic Pipeline</span>
           <div className="flex items-center gap-2">
+
             <button
               onClick={onClose}
               className="btn-secondary text-xs"

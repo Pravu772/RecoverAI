@@ -4,7 +4,7 @@
  * Prevents cascading timeouts when upstream AI APIs experience outages or rate limits.
  * States:
  *   - CLOSED: Normal operation, all calls pass through.
- *   - OPEN: Upstream failing, fast-fails immediately to rule-based fallback (0ms latency).
+ *   - OPEN: Upstream failing, fast-fails immediately to rule-based fallback.
  *   - HALF_OPEN: Trial period to test if upstream has recovered.
  */
 
@@ -16,6 +16,24 @@ class CircuitBreaker {
     this.failureCount = 0;
     this.lastFailureTime = null;
     this.lastStateChange = Date.now();
+  }
+
+  trip(reason = 'Manual trip') {
+    this.state = 'OPEN';
+    this.failureCount = this.failureThreshold;
+    this.lastFailureTime = Date.now();
+    this.lastStateChange = Date.now();
+    console.warn(`[CircuitBreaker] Breaker tripped OPEN (${reason}).`);
+    return this.getStatus();
+  }
+
+  reset() {
+    this.state = 'CLOSED';
+    this.failureCount = 0;
+    this.lastFailureTime = null;
+    this.lastStateChange = Date.now();
+    console.log('[CircuitBreaker] Breaker reset to CLOSED.');
+    return this.getStatus();
   }
 
   async execute(asyncFn, fallbackFn) {
@@ -66,3 +84,4 @@ class CircuitBreaker {
 const geminiCircuitBreaker = new CircuitBreaker(3, 30000);
 
 module.exports = { geminiCircuitBreaker, CircuitBreaker };
+

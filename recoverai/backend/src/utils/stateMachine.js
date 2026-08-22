@@ -2,17 +2,18 @@
  * Deterministic Finite State Machine (FSM) for Autonomous Revenue Recovery
  * 
  * Formal state transitions:
- *  - failed ➔ [classifying, pending_human, opted_out]
- *  - classifying ➔ [action_taken, exception, pending_human, max_retries_reached]
- *  - action_taken ➔ [recovered, action_taken, max_retries_reached, ptp_committed, ptp_broken, pending_human, opted_out]
- *  - ptp_committed ➔ [recovered, ptp_broken, pending_human]
- *  - ptp_broken ➔ [action_taken, pending_human, max_retries_reached]
- *  - exception ➔ [classifying, action_taken, pending_human, recovered]
- *  - pending_human ➔ [action_taken, recovered, max_retries_reached, opted_out]
- *  - max_retries_reached ➔ [pending_human] (Permanent automated stop; human override only)
- *  - opted_out ➔ [] (Terminal state)
- *  - recovered ➔ [] (Terminal state)
+ *  - failed -> [classifying, pending_human, opted_out]
+ *  - classifying -> [action_taken, exception, pending_human, max_retries_reached]
+ *  - action_taken -> [recovered, action_taken, max_retries_reached, ptp_committed, ptp_broken, pending_human, opted_out]
+ *  - ptp_committed -> [recovered, ptp_broken, pending_human]
+ *  - ptp_broken -> [action_taken, pending_human, max_retries_reached]
+ *  - exception -> [classifying, action_taken, pending_human, recovered]
+ *  - pending_human -> [action_taken, recovered, max_retries_reached, opted_out]
+ *  - max_retries_reached -> [pending_human] (Permanent automated stop; human override only)
+ *  - opted_out -> [] (Terminal state)
+ *  - recovered -> [] (Terminal state)
  */
+
 
 const ALLOWED_TRANSITIONS = {
   failed: ['classifying', 'action_taken', 'pending_human', 'opted_out', 'exception', 'recovered'],

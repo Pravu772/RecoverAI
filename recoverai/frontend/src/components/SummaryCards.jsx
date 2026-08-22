@@ -33,7 +33,7 @@ const Sparkline = ({ color = '#059669', isPositive = true }) => {
     : "0,4 6,7 12,5 18,10 24,8 30,12 36,11 42,15";
 
   return (
-    <svg className="w-11 h-4 overflow-visible" viewBox="0 0 42 16" fill="none">
+    <svg className="w-10 h-3.5 overflow-visible flex-shrink-0" viewBox="0 0 42 16" fill="none">
       <polyline
         points={points}
         fill="none"
@@ -57,31 +57,38 @@ const MetricCard = ({ label, value, sub, Icon, accentColor, isCurrency, isPercen
     : counted.toLocaleString('en-IN');
 
   return (
-    <div className="p-4 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all flex flex-col justify-between gap-3 group">
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-2xs font-bold uppercase tracking-wider text-slate-500">{label}</p>
-          {isLoading ? (
-            <div className="skeleton h-7 w-24 mt-1.5" />
-          ) : (
-            <p className="text-xl font-bold font-mono tracking-tight text-slate-900 mt-1 tabular-nums animate-count">
-              {display}
-            </p>
-          )}
-        </div>
+    <div className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs hover:shadow-md hover:border-slate-300 transition-all flex flex-col justify-between gap-2.5 group">
+      {/* Top Row: Label on Left, Icon on Right */}
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-2xs font-bold uppercase tracking-wider text-slate-500 truncate">{label}</p>
         <div
-          className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105"
+          className="w-7 h-7 rounded-lg flex items-center justify-center flex-shrink-0 transition-transform group-hover:scale-105"
           style={{ background: accentColor + '14', color: accentColor }}
         >
-          <Icon className="w-4 h-4" />
+          <Icon className="w-3.5 h-3.5" />
         </div>
       </div>
-      
-      <div className="flex items-center justify-between pt-2 border-t border-slate-100/80">
-        {sub && !isLoading ? (
-          <p className="text-2xs text-slate-500 font-medium truncate">{sub}</p>
+
+      {/* Main Metric Value (Full Width - Zero Collision) */}
+      <div className="min-w-0">
+        {isLoading ? (
+          <div className="skeleton h-6 w-24 my-0.5" />
         ) : (
-          <div className="skeleton h-2.5 w-16" />
+          <p
+            className="text-lg sm:text-xl font-bold font-mono tracking-tight text-slate-900 tabular-nums animate-count truncate"
+            title={display}
+          >
+            {display}
+          </p>
+        )}
+      </div>
+      
+      {/* Bottom Row: Subtitle & Sparkline */}
+      <div className="flex items-center justify-between pt-2 border-t border-slate-100/80 gap-2">
+        {sub && !isLoading ? (
+          <p className="text-3xs text-slate-500 font-medium truncate">{sub}</p>
+        ) : (
+          <div className="skeleton h-2 w-14" />
         )}
         {!isLoading && <Sparkline color={accentColor} isPositive={isPositive} />}
       </div>
@@ -98,7 +105,7 @@ const SummaryCards = ({ summary, isLoading }) => {
       <MetricCard
         label="Total at Risk"
         value={s.total_amount_at_risk || 0}
-        sub={`${s.total_transactions || 0} revenue items`}
+        sub={`${s.total_transactions || 0} items`}
         Icon={IconAlertTriangle}
         accentColor="#d97706"
         isCurrency
@@ -107,7 +114,7 @@ const SummaryCards = ({ summary, isLoading }) => {
       <MetricCard
         label="Amount Recovered"
         value={s.total_recovered_amount || 0}
-        sub={`${s.status_breakdown?.recovered || 0} items recovered`}
+        sub={`${s.status_breakdown?.recovered || 0} recovered`}
         Icon={IconCheckCircle}
         accentColor="#059669"
         isCurrency
@@ -116,7 +123,7 @@ const SummaryCards = ({ summary, isLoading }) => {
       <MetricCard
         label="Recovery Rate"
         value={s.recovery_rate_percent || 0}
-        sub="across all streams"
+        sub="all streams"
         Icon={IconTrendingUp}
         accentColor="#1d4ed8"
         isPercent
@@ -125,7 +132,7 @@ const SummaryCards = ({ summary, isLoading }) => {
       <MetricCard
         label="PTP Commitments"
         value={s.ptp_committed_amount || 0}
-        sub={`${s.ptp_committed_count || 0} promised accounts`}
+        sub={`${s.ptp_committed_count || 0} accounts`}
         Icon={IconCalendar}
         accentColor="#7c3aed"
         isCurrency
@@ -134,7 +141,7 @@ const SummaryCards = ({ summary, isLoading }) => {
       <MetricCard
         label="Needs Attention"
         value={exceptionTotal}
-        sub="exceptions + escalated"
+        sub="exceptions"
         Icon={IconXCircle}
         accentColor="#dc2626"
         isLoading={isLoading}
@@ -144,4 +151,3 @@ const SummaryCards = ({ summary, isLoading }) => {
 };
 
 export default SummaryCards;
-
