@@ -6,28 +6,28 @@ import { useState, useEffect, useRef } from 'react';
  * Every 3rd streak carries a tiny ₹ symbol particle.
  */
 const STREAKS = [
-  { top: '4%',  duration: 4.2, delay: 0,    opacity: 0.13, width: 220, hasRupee: false },
-  { top: '9%',  duration: 5.8, delay: 0.7,  opacity: 0.09, width: 160, hasRupee: false },
-  { top: '15%', duration: 3.9, delay: 1.4,  opacity: 0.17, width: 300, hasRupee: true  },
-  { top: '21%', duration: 6.5, delay: 0.3,  opacity: 0.10, width: 190, hasRupee: false },
-  { top: '27%', duration: 4.7, delay: 2.1,  opacity: 0.14, width: 240, hasRupee: false },
-  { top: '33%', duration: 5.2, delay: 0.9,  opacity: 0.08, width: 170, hasRupee: true  },
-  { top: '39%', duration: 3.6, delay: 1.8,  opacity: 0.18, width: 280, hasRupee: false },
-  { top: '45%', duration: 7.1, delay: 0.4,  opacity: 0.11, width: 210, hasRupee: false },
-  { top: '51%', duration: 4.4, delay: 2.6,  opacity: 0.16, width: 320, hasRupee: true  },
-  { top: '57%', duration: 5.9, delay: 1.1,  opacity: 0.09, width: 155, hasRupee: false },
-  { top: '63%', duration: 3.8, delay: 0.6,  opacity: 0.15, width: 265, hasRupee: false },
-  { top: '69%', duration: 6.3, delay: 1.9,  opacity: 0.12, width: 195, hasRupee: true  },
-  { top: '75%', duration: 4.1, delay: 0.2,  opacity: 0.18, width: 310, hasRupee: false },
-  { top: '81%', duration: 5.5, delay: 2.3,  opacity: 0.10, width: 175, hasRupee: false },
-  { top: '87%', duration: 3.7, delay: 1.5,  opacity: 0.14, width: 245, hasRupee: true  },
-  { top: '93%', duration: 6.8, delay: 0.8,  opacity: 0.08, width: 200, hasRupee: false },
+  { top: '4%', duration: 4.2, delay: 0, opacity: 0.13, width: 220, hasRupee: false },
+  { top: '9%', duration: 5.8, delay: 0.7, opacity: 0.09, width: 160, hasRupee: false },
+  { top: '15%', duration: 3.9, delay: 1.4, opacity: 0.17, width: 300, hasRupee: true },
+  { top: '21%', duration: 6.5, delay: 0.3, opacity: 0.10, width: 190, hasRupee: false },
+  { top: '27%', duration: 4.7, delay: 2.1, opacity: 0.14, width: 240, hasRupee: false },
+  { top: '33%', duration: 5.2, delay: 0.9, opacity: 0.08, width: 170, hasRupee: true },
+  { top: '39%', duration: 3.6, delay: 1.8, opacity: 0.18, width: 280, hasRupee: false },
+  { top: '45%', duration: 7.1, delay: 0.4, opacity: 0.11, width: 210, hasRupee: false },
+  { top: '51%', duration: 4.4, delay: 2.6, opacity: 0.16, width: 320, hasRupee: true },
+  { top: '57%', duration: 5.9, delay: 1.1, opacity: 0.09, width: 155, hasRupee: false },
+  { top: '63%', duration: 3.8, delay: 0.6, opacity: 0.15, width: 265, hasRupee: false },
+  { top: '69%', duration: 6.3, delay: 1.9, opacity: 0.12, width: 195, hasRupee: true },
+  { top: '75%', duration: 4.1, delay: 0.2, opacity: 0.18, width: 310, hasRupee: false },
+  { top: '81%', duration: 5.5, delay: 2.3, opacity: 0.10, width: 175, hasRupee: false },
+  { top: '87%', duration: 3.7, delay: 1.5, opacity: 0.14, width: 245, hasRupee: true },
+  { top: '93%', duration: 6.8, delay: 0.8, opacity: 0.08, width: 200, hasRupee: false },
 ];
 
 /* SVG ring constants — circumference of circle with r=58 ≈ 364.4px */
-const RING_R       = 58;
-const RING_SIZE    = (RING_R + 10) * 2;   // 136px container
-const RING_CIRC    = 2 * Math.PI * RING_R; // ≈ 364.4
+const RING_R = 58;
+const RING_SIZE = (RING_R + 10) * 2;   // 136px container
+const RING_CIRC = 2 * Math.PI * RING_R; // ≈ 364.4
 
 /**
  * LoadingScreen — full-screen cold-load animation.
@@ -61,7 +61,7 @@ const LoadingScreen = ({ isLoading, onDone }) => {
     if (!isLoading && phase === 'loop') {
       setPhase('exit');
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoading]);
 
   // After reveal animation completes (~1.5s), move to 'loop' if still loading
@@ -157,8 +157,8 @@ const LoadingScreen = ({ isLoading, onDone }) => {
           >
             <defs>
               <linearGradient id="ringGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                <stop offset="0%"   stopColor="#14b8a6" />   {/* teal-500 */}
-                <stop offset="50%"  stopColor="#34d399" />   {/* emerald-400 */}
+                <stop offset="0%" stopColor="#14b8a6" />   {/* teal-500 */}
+                <stop offset="50%" stopColor="#34d399" />   {/* emerald-400 */}
                 <stop offset="100%" stopColor="#10b981" />   {/* emerald-500 */}
               </linearGradient>
             </defs>

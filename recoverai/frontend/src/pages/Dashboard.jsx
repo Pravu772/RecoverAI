@@ -27,17 +27,37 @@ import {
 
 import { useCurrency } from '../context/CurrencyContext.jsx';
 
+// Local storage hydration for 0ms instant first render
+const getCachedSummary = () => {
+  try {
+    const raw = sessionStorage.getItem('recoverai_cached_summary') || localStorage.getItem('recoverai_cached_summary');
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+const getCachedTxns = () => {
+  try {
+    const raw = sessionStorage.getItem('recoverai_cached_txns') || localStorage.getItem('recoverai_cached_txns');
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+};
+
 const Dashboard = ({ onFirstLoad }) => {
   const firstLoadFired = useRef(false);
   const { currency, setCurrency } = useCurrency();
-  const [transactions, setTransactions] = useState([]);
-  const [summary, setSummary] = useState(null);
+  const [transactions, setTransactions] = useState(() => getCachedTxns());
+  const [summary, setSummary] = useState(() => getCachedSummary());
   const [selectedTxn, setSelectedTxn] = useState(null);
   const [loadingTxns, setLoadingTxns] = useState(false);
   const [loadingSummary, setLoadingSummary] = useState(false);
+  const [isManualRefreshing, setIsManualRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('transactions');
   const [selectedStream, setSelectedStream] = useState('all');
-  const [lastRefreshed, setLastRefreshed] = useState(null);
+  const [lastRefreshed, setLastRefreshed] = useState(new Date());
   const [toasts, setToasts] = useState([]);
 
   // Multi-Tenant RBAC State
@@ -55,6 +75,13 @@ const Dashboard = ({ onFirstLoad }) => {
   const [rbacOpen, setRbacOpen] = useState(false);
   const [flowOpen, setFlowOpen] = useState(false);
 
+  // If cache exists on initial mount, dismiss full-screen loading overlay immediately
+  useEffect(() => {
+    if (summary && transactions.length > 0 && !firstLoadFired.current) {
+      firstLoadFired.current = true;
+      onFirstLoad?.();
+    }
+  }, [summary, transactions.length, onFirstLoad]);
 
   const addToast = (title, message, type = 'info') => {
     const id = Date.now() + Math.random();
@@ -69,7 +96,6 @@ const Dashboard = ({ onFirstLoad }) => {
   useEffect(() => {
     const streamUrl = getStreamUrl();
     const eventSource = new EventSource(streamUrl);
-
 
     eventSource.onmessage = (event) => {
       try {
@@ -100,6 +126,10 @@ const Dashboard = ({ onFirstLoad }) => {
       const list = Array.isArray(data) ? data : data?.transactions || [];
       setTransactions(list);
       setLastRefreshed(new Date());
+      try {
+        sessionStorage.setItem('recoverai_cached_txns', JSON.stringify(list));
+        localStorage.setItem('recoverai_cached_txns', JSON.stringify(list));
+      } catch { }
       return list;
     } catch (e) {
       console.error('Failed to fetch transactions:', e);
@@ -114,6 +144,10 @@ const Dashboard = ({ onFirstLoad }) => {
     try {
       const data = await getDashboardSummary();
       setSummary(data);
+      try {
+        sessionStorage.setItem('recoverai_cached_summary', JSON.stringify(data));
+        localStorage.setItem('recoverai_cached_summary', JSON.stringify(data));
+      } catch { }
       return data;
     } catch (e) {
       console.error('Failed to fetch summary:', e);
@@ -125,13 +159,30 @@ const Dashboard = ({ onFirstLoad }) => {
 
   const refresh = useCallback(async () => {
     const results = await Promise.allSettled([fetchTransactions(), fetchSummary()]);
-    // Signal the loading screen exactly once — on the very first successful fetch
     if (!firstLoadFired.current) {
       firstLoadFired.current = true;
       onFirstLoad?.();
     }
     return results;
   }, [fetchTransactions, fetchSummary, onFirstLoad]);
+
+  // Complete manual refresh handler with user feedback
+  const handleManualRefresh = async () => {
+    if (isManualRefreshing || loadingTxns || loadingSummary) return;
+    setIsManualRefreshing(true);
+    try {
+      await refresh();
+      addToast(
+        'Dashboard Synced',
+        'Ledger records, PTP commitments & unit economics synchronized with live database.',
+        'success'
+      );
+    } catch (err) {
+      addToast('Sync Warning', 'Could not refresh all endpoints: ' + err.message, 'warning');
+    } finally {
+      setIsManualRefreshing(false);
+    }
+  };
 
   useEffect(() => {
     refresh();
@@ -228,7 +279,7 @@ const Dashboard = ({ onFirstLoad }) => {
 
         {/* Streamlined Top Utility Header */}
         <header className="sticky top-0 z-30 glass-nav border-b border-slate-200/80 shadow-2xs h-16 px-6 lg:px-8 flex items-center justify-between gap-4">
-          
+
           {/* Left Zone: Title, Tenant Badge & Engine Status */}
           <div className="flex items-center gap-3 min-w-0">
             <h1 className="text-base font-bold text-slate-900 truncate">
@@ -297,12 +348,12 @@ const Dashboard = ({ onFirstLoad }) => {
             {/* Refresh Button */}
             <button
               id="btn-refresh"
-              onClick={refresh}
-              disabled={loadingTxns}
-              className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-2xs cursor-pointer"
-              title="Refresh ledger state"
+              onClick={handleManualRefresh}
+              disabled={loadingTxns || loadingSummary || isManualRefreshing}
+              className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-2xs cursor-pointer disabled:opacity-50"
+              title="Sync Dashboard: Re-query live ledger database and recalculate CFO unit economics"
             >
-              <IconRefreshCw className={`w-4 h-4 ${loadingTxns ? 'animate-spin' : ''}`} />
+              <IconRefreshCw className={`w-4 h-4 ${(loadingTxns || loadingSummary || isManualRefreshing) ? 'animate-spin text-indigo-600' : ''}`} />
             </button>
           </div>
         </header>
