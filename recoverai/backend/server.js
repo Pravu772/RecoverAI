@@ -178,7 +178,7 @@ app.use((req, res) => {
 if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`RecoverAI backend running on port ${PORT} [${process.env.NODE_ENV || 'development'}]`);
-    console.log(`[Security] helmet=ON | auth=Bearer | CORS origins: ${allowedOrigins.join(', ')}`);
+    console.log(`[Security] helmet=ON | auth=Bearer | CORS=${isDev ? 'localhost (dev mode)' : process.env.FRONTEND_ORIGIN || 'strict'}`);
   });
 }
 
