@@ -20,8 +20,22 @@ const generateBatch = async (req, res) => {
     return res.status(400).json({ error: 'count must be between 1 and 500' });
   }
 
-  // Clear existing transactions for a clean demo run
-  await Transaction.deleteMany({});
+  // FIX #4 — Scope delete to demo merchant only; require explicit confirm flag.
+  // This prevents accidental or malicious full-collection wipes.
+  const merchantScope = req.body.merchant_id || 'MER_DEMO';
+  const confirmed = req.body.confirm === true || req.query.confirm === 'true';
+  if (!confirmed) {
+    return res.status(400).json({
+      error: 'Add "confirm": true to the request body to clear existing demo data before generating.',
+    });
+  }
+
+  // Clear only this merchant\'s transactions for a clean demo run
+  await Transaction.deleteMany({ merchant_id: { $in: [
+    'MER_DEMO', 'MER_ZOMATO', 'MER_SWIGGY', 'MER_AMAZON', 'MER_FLIPKART',
+    'MER_NETFLIX', 'MER_HOTSTAR', 'MER_RAZORPAY_DEMO', 'MER_PAYTM_MALL',
+    'MER_MYNTRA', 'MER_BIGBASKET', 'MER_FRESHWORKS_B2B', 'MER_ZOHO_INVOICE', 'MER_PLAYGROUND'
+  ]}});
 
   const transactionData = generateTransactions(count);
   const transactions = await Transaction.insertMany(transactionData);
@@ -90,47 +104,51 @@ const classifyBatch = async (req, res) => {
     return res.json({ message: 'No failed transactions to classify', results: [] });
   }
 
+  // FIX #6 — Process in parallel chunks of 10 instead of sequential await-in-loop.
+  // Prevents blocking the event loop for minutes during large batches.
+  const CHUNK_SIZE = 10;
   const results = [];
 
-  for (const txn of failedTransactions) {
-    txn.status = 'classifying';
-    await txn.save();
+  for (let i = 0; i < failedTransactions.length; i += CHUNK_SIZE) {
+    const chunk = failedTransactions.slice(i, i + CHUNK_SIZE);
 
-    try {
+    // Mark all in chunk as classifying first
+    await Promise.all(chunk.map(txn => {
+      txn.status = 'classifying';
+      return txn.save();
+    }));
+
+    // Classify in parallel
+    const settled = await Promise.allSettled(chunk.map(async txn => {
       const result = await classifyTransaction(txn);
-
       txn.classified_reason = result.classified_reason;
-      txn.confidence_score = result.confidence_score;
-      txn.ai_reasoning = result.reasoning;
+      txn.confidence_score  = result.confidence_score;
+      txn.ai_reasoning      = result.reasoning;
 
       if (result.is_exception) {
-        txn.status = 'exception';
+        txn.status           = 'exception';
         txn.exception_reason = result.exception_reason;
       } else {
         txn.status = 'action_taken';
       }
+      await txn.save();
+      return { transaction_id: txn.transaction_id, revenue_stream: txn.revenue_stream, status: txn.status, classified_reason: txn.classified_reason, used_ai: result.used_ai };
+    }));
 
-      await txn.save();
-      results.push({
-        transaction_id: txn.transaction_id,
-        revenue_stream: txn.revenue_stream,
-        status: txn.status,
-        classified_reason: txn.classified_reason,
-        used_ai: result.used_ai
-      });
-    } catch (err) {
-      txn.status = 'exception';
-      txn.exception_reason = `Unexpected error during classification: ${err.message}`;
-      await txn.save();
-      results.push({ transaction_id: txn.transaction_id, status: 'exception', error: err.message });
+    for (const outcome of settled) {
+      if (outcome.status === 'fulfilled') {
+        results.push(outcome.value);
+      } else {
+        results.push({ status: 'exception', error: outcome.reason?.message });
+      }
     }
   }
 
   const summary = {
-    total: results.length,
+    total:      results.length,
     classified: results.filter(r => r.status === 'action_taken').length,
     exceptions: results.filter(r => r.status === 'exception').length,
-    ai_used: results.filter(r => r.used_ai).length,
+    ai_used:    results.filter(r => r.used_ai).length,
   };
 
   res.json({ message: 'Batch classification complete', summary, results });

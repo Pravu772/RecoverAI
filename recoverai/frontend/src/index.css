@@ -448,3 +448,266 @@
   to   { width: 0%; }
 }
 
+/* ═══════════════════════════════════════════════════════════════════════════
+   LOADING ANIMATION SYSTEM — RecoverAI "Revenue Recovery" Visual Story
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── Layer 1: Cash Flow Line Streaks ─────────────────────────────────────── */
+@keyframes flowLine {
+  0%   { transform: translateX(-120%) translateY(0);   opacity: 0; }
+  8%   { opacity: 1; }
+  92%  { opacity: 1; }
+  100% { transform: translateX(120vw) translateY(-18px); opacity: 0; }
+}
+
+@keyframes flowLineSlow {
+  0%   { transform: translateX(-120%) translateY(0);   opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { transform: translateX(120vw) translateY(-24px); opacity: 0; }
+}
+
+/* ── Layer 2: Focal Point Reveal ─────────────────────────────────────────── */
+@keyframes revealFocus {
+  0%   { opacity: 0.12; filter: blur(3px) saturate(0.4); transform: scale(0.91); }
+  60%  { opacity: 0.85; filter: blur(0.8px) saturate(0.85); transform: scale(0.98); }
+  100% { opacity: 1;    filter: blur(0) saturate(1);   transform: scale(1); }
+}
+
+/* ── SVG Ring Fill (stroke-dashoffset: 364 → 0) ──────────────────────────── */
+@keyframes ringFill {
+  0%   { stroke-dashoffset: 364; }
+  80%  { stroke-dashoffset: 0; }
+  100% { stroke-dashoffset: 0; }
+}
+
+@keyframes ringPulse {
+  0%, 100% { stroke-dashoffset: 30;  }
+  50%       { stroke-dashoffset: 0;   }
+}
+
+/* ── Status Label Crossfade ──────────────────────────────────────────────── */
+@keyframes labelFadeOutHalf {
+  0%   { opacity: 1; transform: translateY(0); }
+  70%  { opacity: 1; transform: translateY(0); }
+  100% { opacity: 0; transform: translateY(-4px); }
+}
+
+@keyframes labelFadeInHalf {
+  0%   { opacity: 0; transform: translateY(4px); }
+  30%  { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes labelFadeOutLate {
+  0%   { opacity: 1; }
+  70%  { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ── Wordmark / Logo entrance ────────────────────────────────────────────── */
+@keyframes wordmarkRise {
+  0%   { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Overlay Exit ────────────────────────────────────────────────────────── */
+@keyframes screenFadeOut {
+  0%   { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* ── Inline ring spinner ─────────────────────────────────────────────────── */
+@keyframes ringSpinDash {
+  0%   { stroke-dashoffset: 100; transform: rotate(0deg); }
+  50%  { stroke-dashoffset: 20; }
+  100% { stroke-dashoffset: 100; transform: rotate(360deg); }
+}
+
+/* ── Utility classes ─────────────────────────────────────────────────────── */
+.loading-screen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: radial-gradient(ellipse at 50% 60%, #072d1e 0%, #041a14 55%, #020f0c 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  will-change: opacity;
+}
+
+.loading-screen-overlay.is-exiting {
+  animation: screenFadeOut 300ms ease forwards;
+  pointer-events: none;
+}
+
+.loading-flow-line {
+  position: absolute;
+  height: 1.5px;
+  border-radius: 99px;
+  will-change: transform, opacity;
+  animation: flowLine linear infinite;
+  /* teal/emerald tint applied per-element in JSX */
+}
+
+.loading-focal-wrap {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.loading-symbol {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 4.5rem;
+  font-weight: 700;
+  color: #a7f3d0;  /* emerald-200 — warm mint */
+  line-height: 1;
+  letter-spacing: -0.04em;
+  text-shadow: 0 0 40px rgba(52, 211, 153, 0.35), 0 0 80px rgba(16, 185, 129, 0.15);
+  animation: revealFocus 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: opacity, filter, transform;
+}
+
+.loading-ring-svg {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  overflow: visible;
+}
+
+.loading-ring-track {
+  fill: none;
+  stroke: rgba(16, 185, 129, 0.1);
+  stroke-width: 2.5;
+}
+
+.loading-ring-fill {
+  fill: none;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  stroke-dasharray: 364 364;
+  stroke-dashoffset: 364;
+  transform-origin: center;
+  animation: ringFill 1.4s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+  will-change: stroke-dashoffset;
+}
+
+.loading-ring-fill.is-looping {
+  animation: ringPulse 2s ease-in-out infinite;
+  stroke-dasharray: 80 284;
+}
+
+.loading-label-wrap {
+  margin-top: 1.25rem;
+  height: 1.25rem;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.loading-label {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.75rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: #6ee7b7;   /* emerald-300 */
+  position: absolute;
+  white-space: nowrap;
+}
+
+.loading-label.label-1 {
+  /* Fades out fully between 0.4s and 0.9s — gone before label-2 appears */
+  animation: labelFadeOutHalf 0.5s ease 0.4s forwards;
+}
+
+.loading-label.label-2 {
+  /* Starts invisible; fades in at 1.0s (after label-1 is gone), fades out at 1.8s */
+  opacity: 0;
+  animation: labelFadeInHalf 0.5s ease 1.0s forwards, labelFadeOutLate 0.4s ease 1.9s forwards;
+}
+
+.loading-wordmark {
+  margin-top: 1rem;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(52, 211, 153, 0.45);  /* emerald-400, subdued */
+  animation: wordmarkRise 0.6s ease 0.3s both;
+}
+
+/* ── LoadingInline (card-level) ──────────────────────────────────────────── */
+.loading-inline-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+}
+
+.loading-inline-label {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.025em;
+  color: #059669;   /* emerald-600 */
+  text-align: center;
+}
+
+.loading-inline-ring {
+  will-change: stroke-dashoffset, transform;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: ringSpinDash 1.6s ease-in-out infinite;
+}
+
+/* ── prefers-reduced-motion overrides ────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  .loading-flow-line {
+    display: none !important;
+  }
+
+  .loading-symbol {
+    animation: none;
+    opacity: 1;
+    filter: none;
+    transform: scale(1);
+  }
+
+  .loading-ring-fill {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+
+  .loading-ring-fill.is-looping {
+    animation: none;
+  }
+
+  .loading-label.label-1 {
+    animation: none;
+    opacity: 1;
+  }
+
+  .loading-label.label-2 {
+    display: none;
+  }
+
+  .loading-screen-overlay.is-exiting {
+    animation: screenFadeOut 150ms ease forwards;
+  }
+
+  .loading-inline-ring {
+    animation: none;
+    stroke-dashoffset: 0;
+  }
+}
+
+

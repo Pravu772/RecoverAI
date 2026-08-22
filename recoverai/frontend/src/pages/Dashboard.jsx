@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { getTransactions, getDashboardSummary, generateBatch, classifyBatch, recoverBatch, advanceTime } from '../api/index.js';
 import Sidebar from '../components/Sidebar.jsx';
 import SummaryCards from '../components/SummaryCards.jsx';
@@ -27,7 +27,8 @@ import {
 
 import { useCurrency } from '../context/CurrencyContext.jsx';
 
-const Dashboard = () => {
+const Dashboard = ({ onFirstLoad }) => {
+  const firstLoadFired = useRef(false);
   const { currency, setCurrency } = useCurrency();
   const [transactions, setTransactions] = useState([]);
   const [summary, setSummary] = useState(null);
@@ -121,8 +122,14 @@ const Dashboard = () => {
   }, []);
 
   const refresh = useCallback(async () => {
-    return await Promise.allSettled([fetchTransactions(), fetchSummary()]);
-  }, [fetchTransactions, fetchSummary]);
+    const results = await Promise.allSettled([fetchTransactions(), fetchSummary()]);
+    // Signal the loading screen exactly once — on the very first successful fetch
+    if (!firstLoadFired.current) {
+      firstLoadFired.current = true;
+      onFirstLoad?.();
+    }
+    return results;
+  }, [fetchTransactions, fetchSummary, onFirstLoad]);
 
   useEffect(() => {
     refresh();

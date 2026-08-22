@@ -4,7 +4,14 @@ const crypto = require('crypto');
 const Transaction = require('../models/Transaction');
 const auditService = require('../services/auditService');
 
-const WEBHOOK_SECRET = process.env.GATEWAY_WEBHOOK_SECRET || 'whsec_recoverai_live_secret_key_2026';
+// SECURITY: GATEWAY_WEBHOOK_SECRET must be set in environment — no fallback allowed.
+// A missing secret causes a hard startup failure rather than silently using a known value.
+const WEBHOOK_SECRET = process.env.GATEWAY_WEBHOOK_SECRET;
+if (!WEBHOOK_SECRET) {
+  throw new Error('[FATAL] GATEWAY_WEBHOOK_SECRET environment variable is not set. ' +
+    'Set it in .env (see .env.example). Never use a hardcoded fallback.');
+}
+
 
 /**
  * Middleware: Verify Gateway Webhook HMAC-SHA256 Signature

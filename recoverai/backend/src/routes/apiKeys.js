@@ -32,9 +32,21 @@ router.get('/', (req, res) => {
 
 /**
  * POST /api/keys/generate
- * Generates a new cryptographically secure scoped API key
+ * Generates a new cryptographically secure scoped API key.
+ *
+ * FIX #8 — Cap at MAX_KEYS to prevent unbounded in-memory growth.
+ * TODO (production): persist apiKeysStore to MongoDB with TTL indexes
+ *       so keys survive server restarts and can't be replayed after restart.
  */
+const MAX_KEYS = 50;
+
 router.post('/generate', (req, res) => {
+  if (apiKeysStore.length >= MAX_KEYS) {
+    return res.status(429).json({
+      error: `API key limit reached (max ${MAX_KEYS}). Revoke an existing key before generating a new one.`,
+    });
+  }
+
   const { name, scopes, environment } = req.body;
   const rawSecret = crypto.randomBytes(24).toString('hex');
   const prefix = environment === 'production' ? `rk_live_${rawSecret.substring(0, 8)}` : `rk_test_${rawSecret.substring(0, 8)}`;
@@ -57,6 +69,7 @@ router.post('/generate', (req, res) => {
     keyRecord: newRecord,
   });
 });
+
 
 /**
  * DELETE /api/keys/:id

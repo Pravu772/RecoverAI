@@ -2,11 +2,20 @@ import axios from 'axios';
 
 const BASE_URL = 'http://localhost:5000/api';
 
+// FIX #3 — Send the internal API token on every request.
+// In production this comes from a Vite env var (VITE_API_TOKEN) injected at build time.
+// Dev fallback matches the value in backend/.env so the app works out-of-the-box.
+const API_TOKEN = import.meta.env.VITE_API_TOKEN || 'dev_token_recoverai_2026_change_in_prod';
+
 const api = axios.create({
   baseURL: BASE_URL,
   timeout: 60000, // 60s timeout for batch AI classification
-  headers: { 'Content-Type': 'application/json' },
+  headers: {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${API_TOKEN}`,
+  },
 });
+
 
 // ── Response interceptor for global error normalization ───────────────────────
 api.interceptors.response.use(
@@ -21,7 +30,8 @@ api.interceptors.response.use(
 // ── Transaction endpoints ─────────────────────────────────────────────────────
 
 export const generateBatch = (count = 50) =>
-  api.post('/transactions/generate', { count }).then(r => r.data);
+  api.post('/transactions/generate', { count, confirm: true }).then(r => r.data);
+
 
 export const classifyBatch = () =>
   api.post('/transactions/classify-batch').then(r => r.data);

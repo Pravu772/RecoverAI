@@ -3,6 +3,11 @@ const { isAlreadyExecuted, markExecuted } = require('../utils/idempotency');
 const { getSimulatedNow } = require('../utils/scheduler');
 const { getGeminiModel } = require('../config/gemini');
 
+// FIX #9 — PII masking for console/log output (DPDP Act / GDPR compliance)
+// Full PII is only stored in the encrypted audit DB, never in plaintext logs.
+const maskName   = (n = '') => n.split(' ').map((w, i) => i === 0 ? (w[0] || '?') + '***' : w[0] + '**').join(' ');
+const maskAmount = (a)      => `₹${String(Math.round(a)).slice(0, -2)}**`;
+
 /**
  * Recovery Decision Engine
  *
@@ -113,7 +118,9 @@ Format output as strict JSON:
       const text = result.response.text();
       return JSON.parse(text);
     } catch (err) {
-      console.warn('Gemini voice script fallback:', err.message);
+      // FIX #9 — mask PII before logging
+      console.warn('[recoveryService] Gemini voice script fallback:', err.message,
+        `| customer=${maskName(customerName)} amount=${maskAmount(amount)}`);
     }
   }
 

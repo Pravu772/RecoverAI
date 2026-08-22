@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { generateBatch, classifyBatch, recoverBatch, advanceTime } from '../api/index.js';
 import { IconDatabase, IconBrain, IconZap, IconFastForward, IconPlay, IconArrowRight } from './Icons.jsx';
+import LoadingInline from './LoadingInline.jsx';
 
 const STEPS = [
   { id: 'generate', label: 'Generate',  sub: '50 synthetic transactions', Icon: IconDatabase },
@@ -167,14 +168,14 @@ const BatchDemoButton = ({ onComplete, onOpenReport, count = 50 }) => {
         ))}
       </div>
 
-      {/* Status message */}
-      {message && (
-        <div
-          className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs bg-blue-50 border border-blue-200 text-blue-800"
-        >
-          <div className="spinner flex-shrink-0 text-blue-700" style={{ width: 12, height: 12 }} />
-          <span>{message}</span>
-        </div>
+      {/* Status message with inline loading indicator */}
+      {running && (
+        <LoadingInline
+          isLoading={running}
+          label={message || 'Executing AI Recovery Pipeline…'}
+          size="sm"
+          minHeight="64px"
+        />
       )}
 
       {/* Error */}
