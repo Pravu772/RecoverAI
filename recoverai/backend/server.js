@@ -50,15 +50,24 @@ app.use(helmet({
 // Distributed tracing correlation ID
 app.use(correlation);
 
-// FIX #10 — CORS: production uses FRONTEND_ORIGIN env var; dev allows localhost
-const allowedOrigins = process.env.NODE_ENV === 'production'
-  ? [process.env.FRONTEND_ORIGIN].filter(Boolean)
-  : ['http://localhost:5173', 'http://localhost:3000'];
+// FIX #10 — CORS: development permits any localhost/127.0.0.1 port; production uses FRONTEND_ORIGIN
+const isDev = process.env.NODE_ENV !== 'production';
 
 app.use(cors({
   origin: (origin, cb) => {
-    // Allow requests with no Origin header (curl, Postman, server-to-server calls)
-    if (!origin || allowedOrigins.includes(origin)) return cb(null, true);
+    // Allow requests with no Origin header (curl, server-to-server)
+    if (!origin) return cb(null, true);
+    if (isDev) {
+      // Allow any localhost / 127.0.0.1 development port (5173, 5174, 3000, etc.)
+      if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+        return cb(null, true);
+      }
+    }
+    if (process.env.FRONTEND_ORIGIN && origin === process.env.FRONTEND_ORIGIN) {
+      return cb(null, true);
+    }
+    // Fallback in case FRONTEND_ORIGIN is not set in dev
+    if (isDev) return cb(null, true);
     cb(new Error(`CORS: Origin "${origin}" is not in the allowed list`));
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -77,12 +86,17 @@ app.use('/api', idempotency);
 // ── FIX #3 — Bearer Token Authentication ─────────────────────────────────────
 // Every /api/* route requires a valid Authorization: Bearer <token> header.
 // EXCEPTIONS:
+//   • OPTIONS preflight requests (browsers do not attach Auth header)
 //   • /api/webhooks/* — authenticated via HMAC-SHA256 signature (per gateway spec)
 //   • /health          — public liveness probe for load balancers
 const INTERNAL_API_TOKEN = process.env.INTERNAL_API_TOKEN;
 
 const requireAuth = (req, res, next) => {
-  if (req.path.startsWith('/webhooks')) return next(); // HMAC-authenticated separately
+  // Preflight requests must pass through without auth
+  if (req.method === 'OPTIONS') return next();
+
+  // Webhooks use HMAC signature verification
+  if (req.path.startsWith('/webhooks')) return next();
 
   const authHeader = req.headers['authorization'] || '';
   const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7).trim() : null;
