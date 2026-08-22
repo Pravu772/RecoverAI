@@ -1,0 +1,25 @@
+services:
+  - type: web
+    name: recoverai-backend
+    env: node
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: MONGO_URI
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GATEWAY_WEBHOOK_SECRET
+        sync: false
+      - key: INTERNAL_API_TOKEN
+        sync: false
+      - key: FRONTEND_ORIGIN
+        sync: false

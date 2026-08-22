@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { getTransactions, getDashboardSummary, generateBatch, classifyBatch, recoverBatch, advanceTime } from '../api/index.js';
+import { getTransactions, getDashboardSummary, generateBatch, classifyBatch, recoverBatch, advanceTime, getStreamUrl } from '../api/index.js';
 import Sidebar from '../components/Sidebar.jsx';
 import SummaryCards from '../components/SummaryCards.jsx';
 import TransactionTable from '../components/TransactionTable.jsx';
@@ -67,7 +67,9 @@ const Dashboard = ({ onFirstLoad }) => {
 
   // SSE Stream Listener for real-time live events
   useEffect(() => {
-    const eventSource = new EventSource('/api/stream/events');
+    const streamUrl = getStreamUrl();
+    const eventSource = new EventSource(streamUrl);
+
 
     eventSource.onmessage = (event) => {
       try {

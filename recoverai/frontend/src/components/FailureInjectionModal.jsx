@@ -3,7 +3,8 @@ import {
   IconX, IconZap, IconShoppingCart, IconRepeat, IconFileText,
   IconCheckCircle, IconPlay, IconActivity, IconShield
 } from './Icons.jsx';
-import axios from 'axios';
+import { injectSingleTransaction, recoverOne } from '../api/index.js';
+
 
 const STREAM_OPTIONS = [
   { id: 'payment_gateway', label: 'Payment Gateway Failure', Icon: IconZap },
@@ -55,13 +56,13 @@ const FailureInjectionModal = ({ isOpen, onClose, onSuccess }) => {
         invoice_aging_days: stream === 'b2b_invoice' ? Number(invoiceAging) : undefined,
       };
 
-      const res = await axios.post('http://localhost:5000/api/transactions/inject-single', payload);
-      const createdTxn = res.data.transaction;
+      const res = await injectSingleTransaction(payload);
+      const createdTxn = res.transaction;
 
       // 2. Classify and recover this single transaction
-      const recRes = await axios.post(`http://localhost:5000/api/transactions/${createdTxn.transaction_id}/recover`);
+      const recRes = await recoverOne(createdTxn.transaction_id);
       
-      setResultTxn(recRes.data.transaction);
+      setResultTxn(recRes.transaction || recRes);
       if (onSuccess) onSuccess();
     } catch (err) {
       console.error('Injection failed:', err);

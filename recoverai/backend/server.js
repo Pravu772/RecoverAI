@@ -50,23 +50,34 @@ app.use(helmet({
 // Distributed tracing correlation ID
 app.use(correlation);
 
-// FIX #10 — CORS: development permits any localhost/127.0.0.1 port; production uses FRONTEND_ORIGIN
+// FIX #10 — CORS: development permits any localhost/127.0.0.1; production permits FRONTEND_ORIGIN + *.vercel.app
 const isDev = process.env.NODE_ENV !== 'production';
 
 app.use(cors({
   origin: (origin, cb) => {
-    // Allow requests with no Origin header (curl, server-to-server)
+    // Allow requests with no Origin header (curl, mobile, server-to-server)
     if (!origin) return cb(null, true);
+
+    // Development: allow all localhost and 127.0.0.1 ports
     if (isDev) {
-      // Allow any localhost / 127.0.0.1 development port (5173, 5174, 3000, etc.)
       if (/^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
         return cb(null, true);
       }
     }
-    if (process.env.FRONTEND_ORIGIN && origin === process.env.FRONTEND_ORIGIN) {
+
+    // Production: check configured FRONTEND_ORIGIN (supports comma-separated list)
+    if (process.env.FRONTEND_ORIGIN) {
+      const allowedList = process.env.FRONTEND_ORIGIN.split(',').map(s => s.trim());
+      if (allowedList.includes(origin) || allowedList.includes('*')) {
+        return cb(null, true);
+      }
+    }
+
+    // Allow any Vercel deployment URL (e.g. https://*.vercel.app)
+    if (/^https:\/\/[a-zA-Z0-9_-]+\.vercel\.app$/.test(origin)) {
       return cb(null, true);
     }
-    // Fallback in case FRONTEND_ORIGIN is not set in dev
+
     if (isDev) return cb(null, true);
     cb(new Error(`CORS: Origin "${origin}" is not in the allowed list`));
   },

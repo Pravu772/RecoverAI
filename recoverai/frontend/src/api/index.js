@@ -1,6 +1,14 @@
 import axios from 'axios';
 
-const BASE_URL = 'http://localhost:5000/api';
+// Support production backend URL on Render via VITE_API_BASE_URL env var
+// Dev fallback: http://localhost:5000/api
+const BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+
+// Derive SSE Stream endpoint URL
+export const getStreamUrl = () => {
+  const root = BASE_URL.replace(/\/api\/?$/, '');
+  return `${root}/api/stream/events`;
+};
 
 // FIX #3 — Send the internal API token on every request.
 // In production this comes from a Vite env var (VITE_API_TOKEN) injected at build time.
@@ -32,6 +40,8 @@ api.interceptors.response.use(
 export const generateBatch = (count = 50) =>
   api.post('/transactions/generate', { count, confirm: true }).then(r => r.data);
 
+export const injectSingleTransaction = (payload) =>
+  api.post('/transactions/inject-single', payload).then(r => r.data);
 
 export const classifyBatch = () =>
   api.post('/transactions/classify-batch').then(r => r.data);
@@ -44,6 +54,7 @@ export const recoverBatch = () =>
 
 export const recoverOne = (id) =>
   api.post(`/transactions/${id}/recover`).then(r => r.data);
+
 
 export const getTransactions = (params = {}) => {
   const queryParams = typeof params === 'string'

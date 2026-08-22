@@ -1,22 +1,50 @@
 import { useState } from 'react';
-import { injectFailure, getChaosStatus } from '../api/index.js';
-import axios from 'axios';
+import { injectFailure, injectSingleTransaction, recoverOne, getAuditTrail } from '../api/index.js';
 import {
   IconX, IconZap, IconShield, IconCheckCircle, IconAlertTriangle,
-  IconPlay, IconActivity, IconFileText, IconArrowRight
+  IconPlay, IconActivity, IconFileText, IconArrowRight, IconClock, IconLayers
 } from './Icons.jsx';
+import { useCurrency } from '../context/CurrencyContext.jsx';
+
+const DRILL_SCENARIOS = [
+  {
+    id: 'gemini_api_down',
+    title: 'Gemini AI Outage (503 Service Unavailable)',
+    badge: 'P2 Core Resilience',
+    desc: 'Simulates complete failure of the primary Gemini Flash 2.5 classification engine. Tests the self-healing circuit breaker fallback to deterministic rule engine without dropping revenue.',
+    expectedFallback: 'Deterministic Rule Engine (Threshold Heuristic)',
+    slaGuarantee: 'Zero Revenue Loss, Latency < 15ms',
+  },
+  {
+    id: 'gateway_circuit_breaker',
+    title: 'Payment Gateway Downstream Crash',
+    badge: 'Network Fault',
+    desc: 'Simulates payment gateway endpoint timing out. Tests exponential backoff, circuit breaking, and human-in-the-loop exception queue routing.',
+    expectedFallback: 'Exponential Backoff Schedule + Exception Queue',
+    slaGuarantee: 'Max 3 retry invariant strictly enforced',
+  },
+  {
+    id: 'whatsapp_api_rate_limit',
+    title: 'Communication Channel Rate Limit (429)',
+    badge: 'Channel Fault',
+    desc: 'Simulates Meta/WhatsApp Business API throttling. Tests automatic cascade fallback to SMS and Voice AI recovery without operator intervention.',
+    expectedFallback: 'SMS Gateway + Dynamic Voice Agent Cascade',
+    slaGuarantee: 'Channel rotation completed in < 500ms',
+  },
+];
 
 const ChaosTestModal = ({ isOpen, onClose, onSelectTxn, onSuccess }) => {
+  const { formatMoney } = useCurrency();
   const [selectedFailure, setSelectedFailure] = useState('gemini_api_down');
-  const [isRunning, setIsRunning] = useState(false);
-  const [drillStep, setDrillStep] = useState(0); // 0: idle, 1: arming, 2: injecting, 3: tripping breaker, 4: fallback executed, 5: verified
+  const [drillRunning, setDrillRunning] = useState(false);
+  const [drillStep, setDrillStep] = useState(0); // 0 = idle, 1 = arming, 2 = injecting, 3 = classifying, 4 = recovering, 5 = done
   const [drillResult, setDrillResult] = useState(null);
   const [error, setError] = useState(null);
 
   if (!isOpen) return null;
 
-  const handleRunChaosDrill = async () => {
-    setIsRunning(true);
+  const handleRunDrill = async () => {
+    setDrillRunning(true);
     setError(null);
     setDrillResult(null);
     setDrillStep(1);
@@ -28,7 +56,7 @@ const ChaosTestModal = ({ isOpen, onClose, onSelectTxn, onSuccess }) => {
       setDrillStep(2);
 
       // Step 2: Inject a realistic ambiguous transaction that requires AI classification
-      const injectRes = await axios.post('http://localhost:5000/api/transactions/inject-single', {
+      const injectRes = await injectSingleTransaction({
         customer_name: 'Dr. Chaos (Resilience Test)',
         customer_phone: '+91 99999 88888',
         amount: 8500,
@@ -36,25 +64,24 @@ const ChaosTestModal = ({ isOpen, onClose, onSelectTxn, onSuccess }) => {
         failure_code: 'GATEWAY_UPSTREAM_503_TIMEOUT',
         merchant_id: 'MER_CHAOS_DEMO',
       });
-      const txn = injectRes.data.transaction;
+      const txn = injectRes.transaction;
       await new Promise(r => setTimeout(r, 700));
       setDrillStep(3);
 
       // Step 3: Classify & Recover — this will trip circuit breaker and execute fallback
-      const recRes = await axios.post(`http://localhost:5000/api/transactions/${txn.transaction_id}/recover`);
-      const recoveredTxn = recRes.data;
+      const recRes = await recoverOne(txn.transaction_id);
       await new Promise(r => setTimeout(r, 700));
       setDrillStep(4);
 
       // Step 4: Fetch audit trail to confirm fallback entry
-      const auditRes = await axios.get(`http://localhost:5000/api/audit/${txn.transaction_id}`);
+      const auditRes = await getAuditTrail(txn.transaction_id);
       await new Promise(r => setTimeout(r, 500));
       setDrillStep(5);
 
       setDrillResult({
-        transaction: auditRes.data.transaction,
-        audit_trail: auditRes.data.audit_trail,
-        fallback_entry: auditRes.data.audit_trail?.find(e =>
+        transaction: auditRes.transaction,
+        audit_trail: auditRes.audit_trail,
+        fallback_entry: auditRes.audit_trail?.find(e =>
           e.action_taken === 'circuit_breaker_fallback_classification' ||
           e.reasoning?.includes('circuit breaker policy') ||
           e.reasoning?.includes('Gemini API unavailable')
