@@ -6,10 +6,18 @@ const ExecutiveROIBanner = ({ summary, onOpenCFO, onOpenPolicy }) => {
   const s = summary || {};
   const recoveredAmount = s.total_recovered_amount || 0;
   
-  // Realistic unit economics calculation for AI compute & communication
-  const estimatedCost = Math.round((s.total_transactions || 0) * 4.2);
+  // Realistic enterprise unit economics calculation (Voice AI telephony + SMS/WhatsApp + compute)
+  const totalTxns = s.total_transactions || 0;
+  const estimatedCost = totalTxns > 0 
+    ? Math.max(120, Math.round(totalTxns * 14.5 + (recoveredAmount * 0.012)))
+    : 0;
   const netSavings = Math.max(0, recoveredAmount - estimatedCost);
-  const roiMultiplier = estimatedCost > 0 ? (recoveredAmount / estimatedCost).toFixed(1) : (recoveredAmount > 0 ? '100+' : '0.0');
+  
+  let roiMultiplier = '0.0';
+  if (estimatedCost > 0 && recoveredAmount > 0) {
+    const rawVal = recoveredAmount / estimatedCost;
+    roiMultiplier = rawVal >= 100 ? rawVal.toFixed(0) : rawVal.toFixed(1);
+  }
 
   return (
     <div className="mb-6 p-5 rounded-2xl bg-gradient-to-r from-emerald-50/50 via-white to-white border border-emerald-200/80 border-l-4 border-l-emerald-500 shadow-xs transition-all">
@@ -17,20 +25,20 @@ const ExecutiveROIBanner = ({ summary, onOpenCFO, onOpenPolicy }) => {
         
         {/* Left Headline: ROI Multiplier Spotlight */}
         <div className="flex items-center gap-4 min-w-0">
-          <div className="w-14 h-14 rounded-2xl bg-emerald-600 text-white flex flex-col items-center justify-center flex-shrink-0 shadow-sm shadow-emerald-600/20">
-            <span className="text-2xs font-bold uppercase tracking-wider opacity-80 leading-none mb-0.5">Yield</span>
-            <span className="text-xl font-black font-mono leading-none tracking-tight">
+          <div className="min-w-[4.5rem] px-3 py-2 h-14 rounded-2xl bg-emerald-600 text-white flex flex-col items-center justify-center flex-shrink-0 shadow-sm shadow-emerald-600/20">
+            <span className="text-3xs font-bold uppercase tracking-widest opacity-80 leading-none mb-1">Yield</span>
+            <span className="text-base sm:text-lg font-black font-mono leading-none tracking-tight whitespace-nowrap">
               {roiMultiplier}x
             </span>
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="text-2xs font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-emerald-100/80 text-emerald-800 border border-emerald-200">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-2xs font-bold uppercase tracking-widest px-2 py-0.5 rounded-full bg-emerald-100/80 text-emerald-800 border border-emerald-200 whitespace-nowrap">
                 Executive Economics
               </span>
-              <span className="text-xs text-slate-500 font-medium">Autonomous Recovery Yield</span>
+              <span className="text-xs text-slate-500 font-medium truncate">Autonomous Recovery Yield</span>
             </div>
-            <h2 className="text-base font-bold text-slate-900 mt-1">
+            <h2 className="text-base font-bold text-slate-900 mt-1 truncate">
               Net Capital Rescued vs. AI Ops Overhead
             </h2>
           </div>
