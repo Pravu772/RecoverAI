@@ -32,12 +32,23 @@ const apiKeyRoutes      = require('./src/routes/apiKeys');
 const { correlation } = require('./src/middleware/correlation');
 const { idempotency  } = require('./src/middleware/idempotency');
 
-const app  = express();
-const PORT = process.env.PORT || 5000;
+const Transaction = require('./src/models/Transaction');
+const { generateTransactions } = require('./src/utils/syntheticDataGenerator');
 
-// ── Connect to MongoDB & Sanitize ─────────────────────────────────────────────
-connectDB().then(() => {
+// ── Connect to MongoDB, Sanitize & Auto-Seed if empty ───────────────────────────
+connectDB().then(async () => {
   sanitizeDatabase();
+  try {
+    const count = await Transaction.countDocuments();
+    if (count === 0) {
+      console.log('[AutoSeed] Database is empty. Auto-seeding 50 synthetic recovery transactions...');
+      const records = generateTransactions(50);
+      await Transaction.insertMany(records);
+      console.log('[AutoSeed] Seeded 50 transactions successfully.');
+    }
+  } catch (err) {
+    console.error('[AutoSeed] Error checking or seeding records:', err.message);
+  }
 });
 
 // ── Middleware ────────────────────────────────────────────────────────────────

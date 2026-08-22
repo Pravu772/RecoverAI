@@ -171,10 +171,15 @@ const Dashboard = ({ onFirstLoad }) => {
     if (isManualRefreshing || loadingTxns || loadingSummary) return;
     setIsManualRefreshing(true);
     try {
-      await refresh();
+      const results = await refresh();
+      const txnsList = results[0]?.status === 'fulfilled' ? results[0].value : [];
+      const sumData = results[1]?.status === 'fulfilled' ? results[1].value : null;
+      const count = Array.isArray(txnsList) ? txnsList.length : 0;
+      const recoveredAmt = sumData?.total_recovered_amount || 0;
+
       addToast(
         'Dashboard Synced',
-        'Ledger records, PTP commitments & unit economics synchronized with live database.',
+        `Live ledger synchronized (${count} records, ₹${recoveredAmt.toLocaleString('en-IN')} recovered).`,
         'success'
       );
     } catch (err) {
@@ -345,15 +350,16 @@ const Dashboard = ({ onFirstLoad }) => {
               <option value="GBP">GBP (£)</option>
             </select>
 
-            {/* Refresh Button */}
+            {/* Refresh / Sync Button */}
             <button
               id="btn-refresh"
               onClick={handleManualRefresh}
               disabled={loadingTxns || loadingSummary || isManualRefreshing}
-              className="p-2 rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-2xs cursor-pointer disabled:opacity-50"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 transition-all shadow-2xs cursor-pointer disabled:opacity-50 font-semibold text-xs"
               title="Sync Dashboard: Re-query live ledger database and recalculate CFO unit economics"
             >
-              <IconRefreshCw className={`w-4 h-4 ${(loadingTxns || loadingSummary || isManualRefreshing) ? 'animate-spin text-indigo-600' : ''}`} />
+              <IconRefreshCw className={`w-3.5 h-3.5 ${(loadingTxns || loadingSummary || isManualRefreshing) ? 'animate-spin text-indigo-600' : 'text-slate-500'}`} />
+              <span className="hidden sm:inline">{isManualRefreshing ? 'Syncing…' : 'Sync'}</span>
             </button>
           </div>
         </header>
