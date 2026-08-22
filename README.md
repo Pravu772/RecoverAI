@@ -17,6 +17,7 @@
 
 ## 🚀 Live Deployments
 
+- **RecoverAI deployed application:** [`https://recoveraiprod.vercel.app/`](https://recoveraiprod.vercel.app/)
 - **Backend API (Render):** [`https://recoverai-backend-uoo0.onrender.com`](https://recoverai-backend-uoo0.onrender.com)
 - **API Health Probe:** [`https://recoverai-backend-uoo0.onrender.com/health`](https://recoverai-backend-uoo0.onrender.com/health)
 - **API Root Info:** [`https://recoverai-backend-uoo0.onrender.com/`](https://recoverai-backend-uoo0.onrender.com/)
@@ -79,8 +80,8 @@ PORT=5000
 NODE_ENV=development
 
 # Security Secrets (Dev tokens work out-of-the-box)
-GATEWAY_WEBHOOK_SECRET=whsec_recoverai_dev_change_in_prod_2026
-INTERNAL_API_TOKEN=dev_token_recoverai_2026_change_in_prod
+GATEWAY_WEBHOOK_SECRET=whsec_your_webhook_secret_here
+INTERNAL_API_TOKEN=your_internal_api_token_here
 FRONTEND_ORIGIN=http://localhost:5173
 ```
 
