@@ -442,3 +442,9 @@
 .eq-bar:nth-child(4) { animation-delay: 0.45s; }
 .eq-bar:nth-child(5) { animation-delay: 0.2s; }
 .eq-bar:nth-child(6) { animation-delay: 0.35s; }
+
+@keyframes shrinkWidth {
+  from { width: 100%; }
+  to   { width: 0%; }
+}
+
