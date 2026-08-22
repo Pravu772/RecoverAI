@@ -32,6 +32,9 @@ const apiKeyRoutes      = require('./src/routes/apiKeys');
 const { correlation } = require('./src/middleware/correlation');
 const { idempotency  } = require('./src/middleware/idempotency');
 
+const app  = express();
+const PORT = process.env.PORT || 5000;
+
 const Transaction = require('./src/models/Transaction');
 const { generateTransactions } = require('./src/utils/syntheticDataGenerator');
 
