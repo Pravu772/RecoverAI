@@ -158,6 +158,33 @@ const Dashboard = ({ onFirstLoad }) => {
     }
   };
 
+  const handleSelectTab = (tabId) => {
+    setActiveTab(tabId);
+    setTimeout(() => {
+      const el = document.getElementById('main-content-view');
+      if (el) {
+        const headerOffset = 72;
+        const elementPosition = el.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+        window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+      }
+    }, 60);
+  };
+
+  const handleSelectStream = (streamId) => {
+    setSelectedStream(streamId);
+    setActiveTab('transactions');
+    setTimeout(() => {
+      const el = document.getElementById('main-content-view');
+      if (el) {
+        const headerOffset = 72;
+        const elementPosition = el.getBoundingClientRect().top;
+        const offsetPosition = elementPosition + window.pageYOffset - headerOffset;
+        window.scrollTo({ top: offsetPosition, behavior: 'smooth' });
+      }
+    }, 60);
+  };
+
   const exceptionCount = transactions.filter(t =>
     ['exception', 'max_retries_reached', 'pending_human', 'opted_out', 'ptp_broken'].includes(t.status)
   ).length;
@@ -177,9 +204,9 @@ const Dashboard = ({ onFirstLoad }) => {
       {/* ── Left Sidebar Navigation ────────────────────────────────────────── */}
       <Sidebar
         activeTab={activeTab}
-        setActiveTab={setActiveTab}
+        setActiveTab={handleSelectTab}
         selectedStream={selectedStream}
-        setSelectedStream={setSelectedStream}
+        setSelectedStream={handleSelectStream}
         transactionsCount={transactions.length}
         exceptionsCount={exceptionCount}
         streamCounts={streamCounts}
@@ -303,7 +330,7 @@ const Dashboard = ({ onFirstLoad }) => {
           />
 
           {/* Dynamic Views */}
-          <div className="animate-fade">
+          <div id="main-content-view" className="animate-fade scroll-mt-20">
             {activeTab === 'transactions' && (
               <TransactionTable
                 transactions={transactions}

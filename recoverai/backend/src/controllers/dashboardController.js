@@ -39,7 +39,8 @@ const getSummary = async (req, res) => {
   const exceptions_count = allTransactions.filter(t => t.status === 'exception').length;
   const pending_human_count = allTransactions.filter(t => t.status === 'pending_human').length;
   const max_retries_count = allTransactions.filter(t => t.status === 'max_retries_reached').length;
-  const opted_out_count = allTransactions.filter(t => t.status === 'opted_out').length;
+  const opted_out_count = allTransactions.filter(t => t.status === 'opted_out' || t.opted_out).length;
+  const ptp_broken_count = allTransactions.filter(t => t.status === 'ptp_broken' || t.ptp_status === 'broken').length;
 
   // PTP metrics
   const ptp_committed_txns = allTransactions.filter(t => ['committed', 'kept'].includes(t.ptp_status));
@@ -109,6 +110,7 @@ const getSummary = async (req, res) => {
     pending_human_count,
     max_retries_count,
     opted_out_count,
+    ptp_broken_count,
     ptp_committed_count,
     ptp_committed_amount,
     breakdown_by_stream,

@@ -56,7 +56,7 @@ const recoverOne = async (req, res) => {
 
 /**
  * POST /api/transactions/recover-batch
- * Runs recovery for all classified (action_taken status) transactions.
+ * Runs recovery for all classified (action_taken status) transactions in parallel chunks.
  */
 const recoverBatch = async (req, res) => {
   // Find all transactions ready for recovery
@@ -75,42 +75,58 @@ const recoverBatch = async (req, res) => {
   const results = [];
   let totalRecovered = 0;
   let totalAmountRecovered = 0;
+  const CHUNK_SIZE = 15;
 
-  for (const txn of eligibleTransactions) {
-    try {
-      const result = await executeRecovery(txn);
+  for (let i = 0; i < eligibleTransactions.length; i += CHUNK_SIZE) {
+    const chunk = eligibleTransactions.slice(i, i + CHUNK_SIZE);
 
-      txn.status = result.new_status;
-      if (result.action_taken !== 'none') {
-        txn.recovery_action = result.action_taken;
-        txn.attempt_count += 1;
+    const chunkResults = await Promise.all(chunk.map(async (txn) => {
+      try {
+        const result = await executeRecovery(txn, { isBatch: true });
+
+        txn.status = result.new_status;
+        if (result.action_taken !== 'none') {
+          txn.recovery_action = result.action_taken;
+          txn.attempt_count += 1;
+        }
+        if (result.next_eligible_action_at) {
+          txn.next_eligible_action_at = result.next_eligible_action_at;
+        }
+        if (result.voice_script) {
+          txn.voice_script = result.voice_script;
+        }
+        if (result.ptp_status && result.ptp_status !== 'none') {
+          txn.ptp_status = result.ptp_status;
+          txn.ptp_date = result.ptp_date;
+          txn.ptp_amount = result.ptp_amount;
+          txn.ptp_notes = result.ptp_notes;
+        }
+
+        await txn.save();
+
+        if (result.success) {
+          totalRecovered++;
+          totalAmountRecovered += txn.amount;
+        }
+
+        return {
+          transaction_id: txn.transaction_id,
+          amount: txn.amount,
+          action_taken: result.action_taken,
+          new_status: txn.status,
+          recovered: result.success,
+        };
+      } catch (err) {
+        console.error(`Recovery error for ${txn.transaction_id}:`, err.message);
+        return {
+          transaction_id: txn.transaction_id,
+          error: err.message,
+          new_status: 'exception',
+        };
       }
-      if (result.next_eligible_action_at) {
-        txn.next_eligible_action_at = result.next_eligible_action_at;
-      }
+    }));
 
-      await txn.save();
-
-      if (result.success) {
-        totalRecovered++;
-        totalAmountRecovered += txn.amount;
-      }
-
-      results.push({
-        transaction_id: txn.transaction_id,
-        amount: txn.amount,
-        action_taken: result.action_taken,
-        new_status: txn.status,
-        recovered: result.success,
-      });
-    } catch (err) {
-      console.error(`Recovery error for ${txn.transaction_id}:`, err.message);
-      results.push({
-        transaction_id: txn.transaction_id,
-        error: err.message,
-        new_status: 'exception',
-      });
-    }
+    results.push(...chunkResults);
   }
 
   const summary = {

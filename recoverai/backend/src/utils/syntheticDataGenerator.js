@@ -51,7 +51,8 @@ const generateTransactions = (count = 50) => {
   const transactions = [];
 
   const optedOutIndices = new Set([3, 11]);
-  const ambiguousIndices = new Set([5, 15, 25]);
+  const ambiguousIndices = new Set([5, 15, 25, 38]);
+  const ptpInitialIndices = new Set([7, 19, 31, 43]);
 
   for (let i = 0; i < count; i++) {
     // Determine stream distribution
@@ -97,6 +98,12 @@ const generateTransactions = (count = 50) => {
 
     const custName = sample(CUSTOMER_NAMES);
     const phone = `+91 9${randInt(100000000, 999999999)}`;
+    const isOptedOut = optedOutIndices.has(i);
+    const hasPtp = ptpInitialIndices.has(i);
+
+    const ptpDate = hasPtp
+      ? new Date(Date.now() + randInt(2, 5) * 24 * 60 * 60 * 1000)
+      : null;
 
     transactions.push({
       transaction_id: `TXN_${uuidv4().replace(/-/g, '').substring(0, 12).toUpperCase()}`,
@@ -113,18 +120,18 @@ const generateTransactions = (count = 50) => {
       failure_code,
       classified_reason: null,
       confidence_score: null,
-      status: 'failed',
+      status: isOptedOut ? 'opted_out' : 'failed',
       recovery_action: null,
-      ptp_status: 'none',
-      ptp_date: null,
-      ptp_amount: null,
-      ptp_notes: null,
+      ptp_status: hasPtp ? 'committed' : 'none',
+      ptp_date: ptpDate,
+      ptp_amount: hasPtp ? amount : null,
+      ptp_notes: hasPtp ? 'Customer agreed to settlement on telephone reminder' : null,
       voice_script: null,
       attempt_count: 0,
-      opted_out: optedOutIndices.has(i),
+      opted_out: isOptedOut,
       next_eligible_action_at: null,
       ai_reasoning: null,
-      exception_reason: null,
+      exception_reason: isOptedOut ? 'Customer registered on National Do-Not-Disturb (TRAI DND) registry' : null,
       created_at: randomPastDate(20),
     });
   }

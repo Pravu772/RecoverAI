@@ -65,11 +65,45 @@ const selectRecoveryAction = (transaction) => {
 /**
  * Generates a realistic, turn-by-turn Hinglish Voice Recovery Script using Gemini or fallback.
  */
-const generateVoiceScript = async (transaction) => {
+const generateVoiceScript = async (transaction, options = {}) => {
   const customerName = transaction.customer_name || 'Customer';
   const amount = transaction.amount;
   const merchant = (transaction.merchant_id || 'Merchant').replace('MER_', '');
   const reason = transaction.classified_reason || 'payment issue';
+
+  // Fast template for batch operations to prevent blocking
+  if (options.fastTemplate) {
+    const in3Days = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString();
+    return {
+      agent_name: "Aarav (RecoverAI Voice Agent)",
+      language: "Hinglish",
+      estimated_duration_sec: 40,
+      summary: `Polite outreach to ${customerName} regarding ₹${amount} ${merchant} transaction with PTP commitment agreement.`,
+      suggested_ptp_date: in3Days,
+      turns: [
+        {
+          speaker: "AI Agent",
+          text_hinglish: `Namaste ${customerName} ji! Main ${merchant} billing recovery team se Aarav baat kar raha hoon. Kya aap 1 minute baat kar sakte hain?`,
+          text_english: `Hello ${customerName}! This is Aarav from the ${merchant} billing recovery team. Do you have 1 minute to speak?`
+        },
+        {
+          speaker: "Customer",
+          text_hinglish: `Haan boliye, mera ₹${amount} ka payment fail ho gaya tha subah.`,
+          text_english: `Yes tell me, my payment of ₹${amount} failed in the morning.`
+        },
+        {
+          speaker: "AI Agent",
+          text_hinglish: `Ji bilkul, bank network glitch ki wajah se hua tha. Maine aapke phone par ek direct Razorpay/UPI payment link bhej diya hai jisme zero transaction fee hai.`,
+          text_english: `Yes, it happened due to a bank network glitch. I have sent a direct zero-fee payment link to your phone.`
+        },
+        {
+          speaker: "Customer",
+          text_hinglish: `Thank you Aarav, main aaj shaam ko link open karke payment complete kar deta hoon.`,
+          text_english: `Thank you Aarav, I will open the link this evening and complete the payment.`
+        }
+      ]
+    };
+  }
 
   const model = getGeminiModel();
   if (model) {
@@ -118,7 +152,6 @@ Format output as strict JSON:
       const text = result.response.text();
       return JSON.parse(text);
     } catch (err) {
-      // FIX #9 — mask PII before logging
       console.warn('[recoveryService] Gemini voice script fallback:', err.message,
         `| customer=${maskName(customerName)} amount=${maskAmount(amount)}`);
     }
@@ -160,7 +193,7 @@ Format output as strict JSON:
 /**
  * Executes the recovery flow for a single transaction.
  */
-const executeRecovery = async (transaction) => {
+const executeRecovery = async (transaction, options = {}) => {
   const txnId = transaction.transaction_id;
   const now = getSimulatedNow();
 
@@ -251,12 +284,25 @@ const executeRecovery = async (transaction) => {
   // Generate voice script if voice call action
   let voiceScript = null;
   if (action === 'hinglish_voice_call' && !transaction.voice_script) {
-    voiceScript = await generateVoiceScript(transaction);
+    voiceScript = await generateVoiceScript(transaction, { fastTemplate: options.isBatch });
   }
 
   // Execute simulated outcome
   const { outcome, new_status, simulated_outcome } = await simulateActionOutcome(action, transaction, now);
   const reasoning = buildRecoveryReasoning(transaction, action, nextAttemptCount, simulated_outcome);
+
+  // Handle Promise-to-Pay assignment on voice outreach or dunning escalation
+  let ptpStatus = transaction.ptp_status || 'none';
+  let ptpDate = transaction.ptp_date || null;
+  let ptpAmount = transaction.ptp_amount || null;
+  let ptpNotes = transaction.ptp_notes || null;
+
+  if (['hinglish_voice_call', 'b2b_dunning_escalation'].includes(action) && new_status !== 'recovered') {
+    ptpStatus = 'committed';
+    ptpDate = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000);
+    ptpAmount = transaction.amount;
+    ptpNotes = `Voice AI outreach: Customer agreed to settle ₹${transaction.amount} by ${ptpDate.toLocaleDateString('en-IN')}`;
+  }
 
   await auditService.log({
     transaction_id: txnId,
@@ -272,6 +318,7 @@ const executeRecovery = async (transaction) => {
       simulated_outcome,
       stream: transaction.revenue_stream,
       has_voice_script: !!voiceScript,
+      ptp_assigned: ptpStatus === 'committed',
     },
   });
 
@@ -294,7 +341,6 @@ const executeRecovery = async (transaction) => {
   if (action === 'scheduled_retry_2days') {
     nextActionAt = new Date(now.getTime() + TWO_DAYS_MS);
   } else if (action === 'smart_payday_retry') {
-    // Smart payday logic: next 1st or 5th of month
     const target = new Date(now);
     target.setDate(target.getDate() <= 5 ? 5 : 1);
     if (target <= now) target.setMonth(target.getMonth() + 1);
@@ -309,6 +355,10 @@ const executeRecovery = async (transaction) => {
     simulated_outcome,
     voice_script: voiceScript,
     next_eligible_action_at: nextActionAt,
+    ptp_status: ptpStatus,
+    ptp_date: ptpDate,
+    ptp_amount: ptpAmount,
+    ptp_notes: ptpNotes,
   };
 };
 

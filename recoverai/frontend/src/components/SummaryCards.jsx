@@ -102,7 +102,7 @@ const MetricCard = ({ label, value, sub, Icon, accentColor, isCurrency, isPercen
 
 const SummaryCards = ({ summary, isLoading }) => {
   const s = summary || {};
-  const exceptionTotal = (s.exceptions_count || 0) + (s.pending_human_count || 0) + (s.max_retries_count || 0);
+  const exceptionTotal = (s.exceptions_count || 0) + (s.pending_human_count || 0) + (s.max_retries_count || 0) + (s.opted_out_count || 0) + (s.ptp_broken_count || 0);
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">

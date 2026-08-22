@@ -6,6 +6,7 @@ import {
 } from './Icons.jsx';
 import { useCurrency } from '../context/CurrencyContext.jsx';
 import { ALL_COMPANY_PROFILES, getCompanyProfile } from '../seedData/index.js';
+import { printProfessionalDossier } from '../utils/printReport.js';
 
 const TENANT_LIST = [
   { id: 'MER_SWIGGY', name: 'Swiggy Food & Instamart', tier: 'Enterprise Tier-1 (High-Velocity B2C)', logoText: 'SW' },
@@ -45,6 +46,52 @@ const CFODigestModal = ({ isOpen, onClose, currentTenant, onSelectTenant }) => {
 
     return () => clearTimeout(timer);
   }, [currentTenant?.id, isOpen]);
+
+  const handlePrintPDF = () => {
+    printProfessionalDossier({
+      title: 'CFO Executive Revenue Recovery Briefing',
+      subtitle: `Unit Economics & Capital Preservation Dossier • ${profile.tier}`,
+      organization: profile.name,
+      orgId: profile.id,
+      period: profile.period,
+      kpis: [
+        { label: 'Total Revenue at Risk', value: formatMoney(profile.stats.total_amount_at_risk), sub: `${profile.stats.total_transactions} transactions` },
+        { label: 'Net Recovered Capital', value: formatMoney(profile.stats.total_recovered_amount), highlight: true, sub: `${profile.stats.recovery_rate_percent}% recovery rate` },
+        { label: 'Recovery ROI Multiplier', value: profile.operating_costs.roi_multiplier, highlight: true, sub: `Net yield: ${formatMoney(profile.operating_costs.net_yield_amount)}` },
+        { label: 'Total Operating Costs', value: formatMoney(profile.operating_costs.total_ops_cost), sub: 'SMS + WhatsApp + Voice' },
+      ],
+      sections: [
+        {
+          title: 'Section A: Multi-Stream Revenue Breakdown',
+          description: 'Recovery performance segmented by business transaction stream',
+          table: {
+            headers: ['Revenue Stream', 'At Risk', 'Recovered', 'Rate', 'Dominant Action Strategy'],
+            rows: profile.streams.map(s => [
+              s.stream_name,
+              formatMoney(s.at_risk),
+              formatMoney(s.recovered),
+              `${s.recovery_rate}%`,
+              s.dominant_action
+            ])
+          }
+        },
+        {
+          title: 'Section B: Top Failure Reasons & Mitigations',
+          table: {
+            headers: ['Failure Reason', 'Exposure', 'Volume', 'Success Rate', 'Automated Mitigation Strategy'],
+            rows: profile.top_failure_drivers.map(d => [
+              d.label,
+              formatMoney(d.impact_amount),
+              `${d.txn_count} txns`,
+              `${d.recovery_pct}%`,
+              d.mitigation
+            ])
+          }
+        }
+      ],
+      complianceNote: profile.compliance_note
+    });
+  };
 
   if (!isOpen) return null;
 
@@ -542,8 +589,8 @@ const CFODigestModal = ({ isOpen, onClose, currentTenant, onSelectTenant }) => {
           </span>
           <div className="flex items-center gap-2">
             <button
-              onClick={() => window.print()}
-              className="btn-secondary text-xs flex items-center gap-1.5 cursor-pointer"
+              onClick={handlePrintPDF}
+              className="btn-secondary text-xs flex items-center gap-1.5 cursor-pointer hover:bg-slate-50"
             >
               <IconFileText className="w-3.5 h-3.5" />
               <span>Export as PDF / Print</span>

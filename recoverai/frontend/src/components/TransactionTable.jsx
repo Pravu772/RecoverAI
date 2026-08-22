@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react';
+import { printProfessionalDossier, exportFormattedExcelCSV } from '../utils/printReport.js';
 import {
   IconSearch, IconFilter, IconChevronUp, IconChevronDown,
   IconChevronRight, actionIcon, reasonIcon, IconCopy, IconCheck,
@@ -187,37 +188,83 @@ const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream 
     );
   };
 
-  // Export CSV Handler
+  // Export Excel CSV Handler
   const handleExportCSV = () => {
     const dataToExport = selectedIds.length > 0
       ? rows.filter(r => selectedIds.includes(r.transaction_id))
       : rows;
 
-    const headers = ['Transaction ID', 'Customer Name', 'Phone', 'Revenue Stream', 'Amount (INR)', 'Diagnosis', 'AI Confidence', 'Recovery Action', 'Status', 'Attempts'];
-    const csvRows = [
-      headers.join(','),
-      ...dataToExport.map(r => [
+    const totalAtRisk = dataToExport.reduce((s, r) => s + (r.amount || 0), 0);
+    const totalRecovered = dataToExport.filter(r => r.status === 'recovered').reduce((s, r) => s + (r.amount || 0), 0);
+
+    exportFormattedExcelCSV('RecoverAI_Transactions_Ledger', {
+      title: 'Transactions & Revenue Recovery Ledger',
+      organization: 'Swiggy Food & Instamart (Enterprise Tier-1)',
+      summary: {
+        'Total Filtered Records': dataToExport.length,
+        'Total Amount at Risk': formatMoney(totalAtRisk),
+        'Total Recovered': formatMoney(totalRecovered),
+        'Stream Filter': selectedStream || 'all',
+        'Status Filter': fStatus || 'all',
+      },
+      headers: ['Transaction ID', 'Customer Name', 'Phone', 'Revenue Stream', 'Amount (INR)', 'Diagnosis', 'AI Confidence', 'Recovery Action', 'Status', 'Attempts', 'PTP Due Date'],
+      rows: dataToExport.map(r => [
         r.transaction_id,
-        `"${r.customer_name || ''}"`,
-        `"${r.customer_phone || ''}"`,
+        r.customer_name || '',
+        r.customer_phone || '',
         r.revenue_stream,
         r.amount,
-        r.classified_reason,
-        r.confidence_score,
-        r.recovery_action,
+        r.classified_reason || 'Unclassified',
+        r.confidence_score ? `${(r.confidence_score * 100).toFixed(0)}%` : '—',
+        r.recovery_action || 'none',
         r.status,
-        r.attempt_count
-      ].join(','))
-    ];
+        `${r.attempt_count}/3`,
+        r.ptp_date ? new Date(r.ptp_date).toLocaleDateString('en-IN') : '—'
+      ])
+    });
+  };
 
-    const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `RecoverAI_Ledger_Export_${new Date().toISOString().split('T')[0]}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+  // Print Professional PDF Dossier
+  const handlePrintPDF = () => {
+    const dataToExport = selectedIds.length > 0
+      ? rows.filter(r => selectedIds.includes(r.transaction_id))
+      : rows;
+
+    const totalAtRisk = dataToExport.reduce((s, r) => s + (r.amount || 0), 0);
+    const recoveredItems = dataToExport.filter(r => r.status === 'recovered');
+    const totalRecovered = recoveredItems.reduce((s, r) => s + (r.amount || 0), 0);
+    const ptpCount = dataToExport.filter(r => r.ptp_status === 'committed').length;
+
+    printProfessionalDossier({
+      title: 'Transactions Ledger & Interventions Dossier',
+      subtitle: `Autonomous Recovery Records • ${selectedStream.toUpperCase()} Stream`,
+      organization: 'Swiggy Food & Instamart',
+      orgId: 'MER_SWIGGY',
+      kpis: [
+        { label: 'Active Ledger Items', value: `${dataToExport.length}`, sub: 'Filtered view' },
+        { label: 'Total at Risk', value: formatMoney(totalAtRisk), sub: 'Gross ledger exposure' },
+        { label: 'Total Recovered', value: formatMoney(totalRecovered), highlight: true, sub: `${recoveredItems.length} transactions rescued` },
+        { label: 'PTP Commitments', value: `${ptpCount} commitments`, highlight: true, sub: 'Scheduled settlement' },
+      ],
+      sections: [
+        {
+          title: 'Transaction Audit Records',
+          table: {
+            headers: ['Transaction ID', 'Customer', 'Stream', 'Amount', 'Diagnosis', 'Action', 'Status'],
+            rows: dataToExport.slice(0, 30).map(r => [
+              r.transaction_id,
+              r.customer_name || 'Customer',
+              r.revenue_stream,
+              formatMoney(r.amount),
+              (r.classified_reason || r.failure_code || '—').replace(/_/g, ' '),
+              (r.recovery_action || 'none').replace(/_/g, ' '),
+              r.status
+            ])
+          }
+        }
+      ],
+      complianceNote: 'All records backed by cryptographic SHA-256 Merkle audit trail and DPDP Act 2023 customer privacy masking.'
+    });
   };
 
   if (isLoading) {
@@ -296,10 +343,18 @@ const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream 
 
           <button
             onClick={handleExportCSV}
-            className="btn-secondary text-xs"
-            title="Export filtered records to CSV"
+            className="btn-secondary text-xs flex items-center gap-1 cursor-pointer"
+            title="Export filtered records to formatted Excel CSV"
           >
             <span>Export CSV</span>
+          </button>
+          <button
+            onClick={handlePrintPDF}
+            className="btn-secondary text-xs flex items-center gap-1 cursor-pointer"
+            title="Print formal executive ledger PDF"
+          >
+            <IconFileText className="w-3.5 h-3.5 text-slate-500" />
+            <span className="hidden sm:inline">Print PDF</span>
           </button>
         </div>
       </div>
