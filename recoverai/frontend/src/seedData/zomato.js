@@ -9,6 +9,7 @@ export const zomatoProfile = {
   tier: 'Enterprise Tier-1 (Food & Dining + Merchant B2B)',
   industry: 'Food Delivery & Dining Out',
   logoText: 'ZM',
+  logo: '/logos/zomato.png',
   currency: 'INR',
   period: 'August 2026 (Monthly Batch M-08)',
   stats: {

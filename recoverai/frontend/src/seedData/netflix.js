@@ -10,6 +10,7 @@ export const netflixProfile = {
   tier: 'Subscriptions Plus (100% Recurring OTT)',
   industry: 'Digital Entertainment & Media OTT',
   logoText: 'NF',
+  logo: '/logos/netflix.png',
   currency: 'INR',
   period: 'August 2026 (Monthly Batch M-08)',
   stats: {

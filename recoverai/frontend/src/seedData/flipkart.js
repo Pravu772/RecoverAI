@@ -9,6 +9,7 @@ export const flipkartProfile = {
   tier: 'Enterprise Tier-1 (High-AOV Omnichannel)',
   industry: 'E-Commerce & Retail Marketplace',
   logoText: 'FK',
+  logo: '/logos/flipkart.png',
   currency: 'INR',
   period: 'August 2026 (Monthly Batch M-08)',
   stats: {

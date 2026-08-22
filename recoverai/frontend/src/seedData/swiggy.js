@@ -9,6 +9,7 @@ export const swiggyProfile = {
   tier: 'Enterprise Tier-1 (High-Velocity B2C)',
   industry: 'Food & Quick Commerce',
   logoText: 'SW',
+  logo: '/logos/swiggy.png',
   currency: 'INR',
   period: 'August 2026 (Monthly Batch M-08)',
   stats: {

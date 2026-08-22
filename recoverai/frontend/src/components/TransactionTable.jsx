@@ -28,6 +28,19 @@ const STREAM_META = {
   b2b_invoice:          { label: 'B2B Receivable',      Icon: IconFileText,      color: 'text-teal-700',   bg: 'bg-teal-50',   border: 'border-teal-200' },
 };
 
+const MERCHANT_LOGOS = {
+  MER_SWIGGY: '/logos/swiggy.png',
+  MER_ZOMATO: '/logos/zomato.png',
+  MER_FLIPKART: '/logos/flipkart.png',
+  MER_NETFLIX: '/logos/netflix.png',
+  MER_FRESHWORKS: '/logos/freshworks.png',
+  MER_FRESHWORKS_B2B: '/logos/freshworks.png',
+  MER_ZOHO_INVOICE: '/logos/freshworks.png',
+  MER_AMAZON: '/logos/flipkart.png',
+  MER_HOTSTAR: '/logos/netflix.png',
+  MER_BIGBASKET: '/logos/swiggy.png',
+};
+
 const REASON_COLORS = {
   insufficient_funds:          '#d97706',
   card_expired:                '#dc2626',
@@ -490,9 +503,19 @@ const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream 
                   {/* Customer / Account */}
                   <td>
                     <div className="flex flex-col">
-                      <span className="font-semibold text-xs text-slate-900 leading-tight">
-                        {txn.customer_name || 'Customer'}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        {MERCHANT_LOGOS[txn.merchant_id] && (
+                          <img
+                            src={MERCHANT_LOGOS[txn.merchant_id]}
+                            alt={txn.merchant_id}
+                            className="w-3.5 h-3.5 rounded-xs object-contain bg-white border border-slate-200 p-0.2 flex-shrink-0"
+                            title={txn.merchant_id}
+                          />
+                        )}
+                        <span className="font-semibold text-xs text-slate-900 leading-tight">
+                          {txn.customer_name || 'Customer'}
+                        </span>
+                      </div>
                       <div className="flex items-center gap-1.5 mt-0.5">
                         <span className="font-mono text-2xs text-slate-400">
                           {(txn.transaction_id || '').substring(0, 12)}…

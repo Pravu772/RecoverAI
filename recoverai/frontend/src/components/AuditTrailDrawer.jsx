@@ -16,6 +16,19 @@ const EVENT_CONFIG = {
   constraint_blocked: { Icon: IconShield, label: 'Constraint Guard', dotColor: '#64748b' },
 };
 
+const MERCHANT_LOGOS = {
+  MER_SWIGGY: '/logos/swiggy.png',
+  MER_ZOMATO: '/logos/zomato.png',
+  MER_FLIPKART: '/logos/flipkart.png',
+  MER_NETFLIX: '/logos/netflix.png',
+  MER_FRESHWORKS: '/logos/freshworks.png',
+  MER_FRESHWORKS_B2B: '/logos/freshworks.png',
+  MER_ZOHO_INVOICE: '/logos/freshworks.png',
+  MER_AMAZON: '/logos/flipkart.png',
+  MER_HOTSTAR: '/logos/netflix.png',
+  MER_BIGBASKET: '/logos/swiggy.png',
+};
+
 const OUTCOME_STYLE = {
   success: { color: '#059669', bg: '#ecfdf5', border: '#a7f3d0' },
   failure: { color: '#dc2626', bg: '#fef2f2', border: '#fecaca' },
@@ -313,9 +326,18 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
         {/* Drawer Header */}
         <div className="sticky top-0 px-6 py-4 flex items-center justify-between gap-4 z-10 bg-white border-b border-slate-200">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700 font-mono text-xs font-bold">
-              ID
-            </div>
+            {MERCHANT_LOGOS[currentTxn.merchant_id] ? (
+              <img
+                src={MERCHANT_LOGOS[currentTxn.merchant_id]}
+                alt={currentTxn.merchant_id}
+                className="w-9 h-9 rounded-xl object-contain bg-white border border-slate-200 p-1 shadow-2xs flex-shrink-0"
+                title={currentTxn.merchant_id}
+              />
+            ) : (
+              <div className="w-9 h-9 rounded-xl bg-indigo-50 border border-indigo-200 flex items-center justify-center text-indigo-700 font-mono text-xs font-bold flex-shrink-0">
+                ID
+              </div>
+            )}
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="text-xs font-bold text-slate-900 truncate">

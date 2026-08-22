@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { IconX, IconUser, IconShield, IconCheckCircle, IconLayers } from './Icons.jsx';
 
 const TENANTS = [
-  { id: 'MER_SWIGGY', name: 'Swiggy Food & Instamart', tier: 'Enterprise Tier-1', activeStream: 'payment_gateway', logoText: 'SW' },
-  { id: 'MER_ZOMATO', name: 'Zomato Dining & Delivery', tier: 'Enterprise Tier-1', activeStream: 'checkout_abandonment', logoText: 'ZM' },
-  { id: 'MER_FLIPKART', name: 'Flipkart Global Commerce', tier: 'Enterprise Tier-1', activeStream: 'checkout_abandonment', logoText: 'FK' },
-  { id: 'MER_NETFLIX', name: 'Netflix Streaming India', tier: 'Subscriptions Plus', activeStream: 'subscription_renewal', logoText: 'NF' },
-  { id: 'MER_FRESHWORKS', name: 'Freshworks B2B SaaS', tier: 'B2B Enterprise Net-60', activeStream: 'b2b_invoice', logoText: 'FW' },
+  { id: 'MER_SWIGGY', name: 'Swiggy Food & Instamart', tier: 'Enterprise Tier-1', activeStream: 'payment_gateway', logoText: 'SW', logo: '/logos/swiggy.png' },
+  { id: 'MER_ZOMATO', name: 'Zomato Dining & Delivery', tier: 'Enterprise Tier-1', activeStream: 'checkout_abandonment', logoText: 'ZM', logo: '/logos/zomato.png' },
+  { id: 'MER_FLIPKART', name: 'Flipkart Global Commerce', tier: 'Enterprise Tier-1', activeStream: 'checkout_abandonment', logoText: 'FK', logo: '/logos/flipkart.png' },
+  { id: 'MER_NETFLIX', name: 'Netflix Streaming India', tier: 'Subscriptions Plus', activeStream: 'subscription_renewal', logoText: 'NF', logo: '/logos/netflix.png' },
+  { id: 'MER_FRESHWORKS', name: 'Freshworks B2B SaaS', tier: 'B2B Enterprise Net-60', activeStream: 'b2b_invoice', logoText: 'FW', logo: '/logos/freshworks.png' },
 ];
 
 const ROLES = [
@@ -76,11 +76,11 @@ const WorkspaceRBACModal = ({ isOpen, onClose, currentTenant, currentRole, onSel
                     }`}
                   >
                     <div className="flex items-center gap-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold ${
-                        isSelected ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-700'
-                      }`}>
-                        {t.logoText}
-                      </div>
+                      <img
+                        src={t.logo}
+                        alt={t.name}
+                        className="w-9 h-9 rounded-xl object-contain bg-white border border-slate-200 p-1 shadow-2xs flex-shrink-0"
+                      />
                       <div>
                         <p className="text-xs font-bold text-slate-900">{t.name}</p>
                         <p className="text-2xs text-slate-500 font-mono">{t.tier} • {t.id}</p>

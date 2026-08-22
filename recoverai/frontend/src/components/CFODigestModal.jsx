@@ -9,11 +9,11 @@ import { ALL_COMPANY_PROFILES, getCompanyProfile } from '../seedData/index.js';
 import { printProfessionalDossier } from '../utils/printReport.js';
 
 const TENANT_LIST = [
-  { id: 'MER_SWIGGY', name: 'Swiggy Food & Instamart', tier: 'Enterprise Tier-1 (High-Velocity B2C)', logoText: 'SW' },
-  { id: 'MER_ZOMATO', name: 'Zomato Dining & Delivery', tier: 'Enterprise Tier-1 (Food & Dining + Merchant B2B)', logoText: 'ZM' },
-  { id: 'MER_FLIPKART', name: 'Flipkart Global Commerce', tier: 'Enterprise Tier-1 (High-AOV Omnichannel)', logoText: 'FK' },
-  { id: 'MER_NETFLIX', name: 'Netflix Streaming India', tier: 'Subscriptions Plus (100% Recurring OTT)', logoText: 'NF' },
-  { id: 'MER_FRESHWORKS', name: 'Freshworks B2B SaaS', tier: 'B2B Enterprise Net-60 (High-AOV Global Accounts)', logoText: 'FW' },
+  { id: 'MER_SWIGGY', name: 'Swiggy Food & Instamart', tier: 'Enterprise Tier-1 (High-Velocity B2C)', logoText: 'SW', logo: '/logos/swiggy.png' },
+  { id: 'MER_ZOMATO', name: 'Zomato Dining & Delivery', tier: 'Enterprise Tier-1 (Food & Dining + Merchant B2B)', logoText: 'ZM', logo: '/logos/zomato.png' },
+  { id: 'MER_FLIPKART', name: 'Flipkart Global Commerce', tier: 'Enterprise Tier-1 (High-AOV Omnichannel)', logoText: 'FK', logo: '/logos/flipkart.png' },
+  { id: 'MER_NETFLIX', name: 'Netflix Streaming India', tier: 'Subscriptions Plus (100% Recurring OTT)', logoText: 'NF', logo: '/logos/netflix.png' },
+  { id: 'MER_FRESHWORKS', name: 'Freshworks B2B SaaS', tier: 'B2B Enterprise Net-60 (High-AOV Global Accounts)', logoText: 'FW', logo: '/logos/freshworks.png' },
 ];
 
 const CFODigestModal = ({ isOpen, onClose, currentTenant, onSelectTenant }) => {
@@ -112,9 +112,11 @@ const CFODigestModal = ({ isOpen, onClose, currentTenant, onSelectTenant }) => {
         {/* Top Executive Header */}
         <div className="px-6 py-4 bg-white border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 print:border-none">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600 flex items-center justify-center text-white font-black text-sm shadow-xs flex-shrink-0">
-              {profile.logoText}
-            </div>
+            <img
+              src={profile.logo || '/logos/swiggy.png'}
+              alt={profile.name}
+              className="w-10 h-10 rounded-xl object-contain bg-white border border-slate-200 p-1 shadow-xs flex-shrink-0"
+            />
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-2xs font-bold uppercase tracking-widest px-2 py-0.5 rounded bg-indigo-50 text-indigo-700 border border-indigo-200">
@@ -187,11 +189,11 @@ const CFODigestModal = ({ isOpen, onClose, currentTenant, onSelectTenant }) => {
                       : 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-100'
                   }`}
                 >
-                  <span className={`w-4 h-4 rounded text-3xs flex items-center justify-center font-black ${
-                    isSelected ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-800'
-                  }`}>
-                    {t.logoText}
-                  </span>
+                  <img
+                    src={t.logo}
+                    alt={t.name}
+                    className="w-4 h-4 rounded-xs object-contain bg-white p-0.2"
+                  />
                   <span>{t.name.split(' ')[0]}</span>
                 </button>
               );
@@ -265,9 +267,11 @@ const CFODigestModal = ({ isOpen, onClose, currentTenant, onSelectTenant }) => {
                           }`}
                         >
                           <td className="p-3 flex items-center gap-2.5">
-                            <span className="w-6 h-6 rounded-md bg-indigo-600 text-white font-bold text-2xs flex items-center justify-center flex-shrink-0">
-                              {p.logoText}
-                            </span>
+                            <img
+                              src={t.logo || p.logo}
+                              alt={p.name}
+                              className="w-7 h-7 rounded-md object-contain bg-white border border-slate-200 p-0.5 flex-shrink-0 shadow-2xs"
+                            />
                             <div>
                               <p className="font-bold text-slate-900">{p.name}</p>
                               <p className="text-3xs text-slate-500 font-mono">{p.tier.split('(')[0]}</p>

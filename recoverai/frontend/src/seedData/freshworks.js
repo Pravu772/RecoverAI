@@ -11,6 +11,7 @@ export const freshworksProfile = {
   tier: 'B2B Enterprise Net-60 (High-AOV Global Accounts)',
   industry: 'Enterprise Software & SaaS CRM',
   logoText: 'FW',
+  logo: '/logos/freshworks.png',
   currency: 'INR',
   period: 'August 2026 (Monthly Batch M-08)',
   stats: {

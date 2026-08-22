@@ -267,9 +267,17 @@ const Sidebar = ({
           title={isCollapsed ? `${currentTenant?.name} (${currentRole?.id.toUpperCase()})` : "Switch Tenant Workspace & RBAC Role"}
         >
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white font-bold text-xs flex items-center justify-center flex-shrink-0 shadow-2xs">
-              {currentTenant?.logoText || 'SW'}
-            </div>
+            {currentTenant?.logo ? (
+              <img
+                src={currentTenant.logo}
+                alt={currentTenant.name}
+                className="w-8 h-8 rounded-lg object-contain bg-white border border-slate-200 p-0.5 flex-shrink-0 shadow-2xs"
+              />
+            ) : (
+              <div className="w-8 h-8 rounded-lg bg-indigo-600 text-white font-bold text-xs flex items-center justify-center flex-shrink-0 shadow-2xs">
+                {currentTenant?.logoText || 'SW'}
+              </div>
+            )}
             {!isCollapsed && (
               <div className="min-w-0 flex-1">
                 <p className="text-xs font-bold text-slate-900 truncate">

@@ -41,7 +41,7 @@ const Dashboard = ({ onFirstLoad }) => {
   const [toasts, setToasts] = useState([]);
 
   // Multi-Tenant RBAC State
-  const [currentTenant, setCurrentTenant] = useState({ id: 'MER_SWIGGY', name: 'Swiggy Food & Instamart', tier: 'Enterprise Tier-1', logoText: 'SW' });
+  const [currentTenant, setCurrentTenant] = useState({ id: 'MER_SWIGGY', name: 'Swiggy Food & Instamart', tier: 'Enterprise Tier-1', logoText: 'SW', logo: '/logos/swiggy.png' });
   const [currentRole, setCurrentRole] = useState({ id: 'cfo', label: 'Finance CFO / VP Finance' });
 
   // Modals state
@@ -236,9 +236,14 @@ const Dashboard = ({ onFirstLoad }) => {
                 : activeTab === 'exceptions' ? 'Exception Resolution Queue'
                   : 'Revenue Recovery Analytics'}
             </h1>
-            <span className="text-2xs font-mono text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200 hidden sm:inline-block truncate">
-              {currentTenant.name}
-            </span>
+            <div className="flex items-center gap-1.5 bg-slate-100 px-2.5 py-1 rounded-full border border-slate-200 hidden sm:inline-flex truncate">
+              {currentTenant.logo && (
+                <img src={currentTenant.logo} alt={currentTenant.name} className="w-4 h-4 object-contain rounded-xs" />
+              )}
+              <span className="text-2xs font-mono text-slate-700 font-semibold truncate">
+                {currentTenant.name}
+              </span>
+            </div>
 
             {/* Live Operational Pipeline Indicator Adjacent to Title */}
             <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 shadow-2xs flex-shrink-0">
