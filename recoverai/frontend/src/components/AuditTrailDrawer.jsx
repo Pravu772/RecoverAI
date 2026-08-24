@@ -63,11 +63,14 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
   const [activeTab, setActiveTab] = useState('timeline');
   const [copied, setCopied] = useState(false);
 
-  // Voice AI State
+  // Voice AI State & Refs
   const [voiceScript, setVoiceScript] = useState(null);
   const [loadingVoice, setLoadingVoice] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [activeTurnIdx, setActiveTurnIdx] = useState(-1);
+  const isPlayingRef = useRef(false);
+  const voiceTimersRef = useRef([]);
+  const audioCtxRef = useRef(null);
 
   // PTP Form State
   const [ptpDate, setPtpDate] = useState(
@@ -77,11 +80,40 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
   const [ptpLoading, setPtpLoading] = useState(false);
   const [currentTxn, setCurrentTxn] = useState(transaction);
 
+  // Universal Stop Voice Playback Engine (instantly clears synthesis, audioCtx & turn timeouts)
+  const stopVoicePlayback = () => {
+    isPlayingRef.current = false;
+    voiceTimersRef.current.forEach(timerId => clearTimeout(timerId));
+    voiceTimersRef.current = [];
+
+    if (window.speechSynthesis) {
+      try {
+        window.speechSynthesis.cancel();
+      } catch (err) {
+        console.warn('Error cancelling speech synthesis:', err);
+      }
+    }
+
+    if (audioCtxRef.current) {
+      try {
+        if (audioCtxRef.current.state !== 'closed') {
+          audioCtxRef.current.close();
+        }
+      } catch (err) {
+        console.warn('Error closing AudioContext:', err);
+      }
+      audioCtxRef.current = null;
+    }
+
+    setIsPlaying(false);
+    setActiveTurnIdx(-1);
+  };
+
   // Keyboard shortcut (Escape to close)
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
-        window.speechSynthesis?.cancel();
+        stopVoicePlayback();
         onClose();
       }
     };
@@ -102,12 +134,22 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
   };
 
   useEffect(() => {
+    stopVoicePlayback();
     fetchAudit();
     setCurrentTxn(transaction);
-    if (transaction.voice_script) {
+    if (transaction?.voice_script) {
       setVoiceScript(transaction.voice_script);
+    } else {
+      setVoiceScript(null);
     }
   }, [transaction?.transaction_id]);
+
+  // Clean up on component unmount
+  useEffect(() => {
+    return () => {
+      stopVoicePlayback();
+    };
+  }, []);
 
   const handleCopyId = () => {
     navigator.clipboard.writeText(currentTxn.transaction_id);
@@ -133,27 +175,30 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
   const handlePlayVoiceScript = () => {
     if (!voiceScript || !voiceScript.turns || voiceScript.turns.length === 0) return;
 
-    if (isPlaying) {
-      if (window.speechSynthesis) window.speechSynthesis.cancel();
-      setIsPlaying(false);
-      setActiveTurnIdx(-1);
+    if (isPlaying || isPlayingRef.current) {
+      stopVoicePlayback();
       return;
     }
 
-    setIsPlaying(true);
-    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    // Clean up any residual audio/timers before new playback session
+    stopVoicePlayback();
 
-    // Create / Resume Web Audio Context for guaranteed acoustic tone & equalizer feedback
-    let audioCtx = null;
+    isPlayingRef.current = true;
+    setIsPlaying(true);
+
+    // Create / Resume Web Audio Context for acoustic tone & equalizer feedback
     try {
       const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (AudioContext) audioCtx = new AudioContext();
+      if (AudioContext) {
+        audioCtxRef.current = new AudioContext();
+      }
     } catch (e) {
       console.warn('Web Audio Context not available:', e);
     }
 
     const playBeep = (freq, durationMs) => {
-      if (!audioCtx) return;
+      const audioCtx = audioCtxRef.current;
+      if (!audioCtx || !isPlayingRef.current) return;
       try {
         if (audioCtx.state === 'suspended') audioCtx.resume();
         const osc = audioCtx.createOscillator();
@@ -173,9 +218,10 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
 
     let index = 0;
     const playNextTurn = () => {
+      if (!isPlayingRef.current) return;
+
       if (index >= voiceScript.turns.length) {
-        setIsPlaying(false);
-        setActiveTurnIdx(-1);
+        stopVoicePlayback();
         return;
       }
 
@@ -197,48 +243,58 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
           utterance.pitch = turn.speaker === 'AI Agent' ? 1.05 : 0.95;
 
           const advance = () => {
+            if (!isPlayingRef.current) return;
             if (!spoken) {
               spoken = true;
               index++;
-              setTimeout(playNextTurn, 500);
+              const timerId = setTimeout(() => {
+                if (isPlayingRef.current) playNextTurn();
+              }, 500);
+              voiceTimersRef.current.push(timerId);
             }
           };
 
-          utterance.onend = advance;
-          utterance.onerror = advance;
+          utterance.onend = () => {
+            if (!isPlayingRef.current) return;
+            advance();
+          };
+          utterance.onerror = (e) => {
+            if (!isPlayingRef.current || e.error === 'canceled' || e.error === 'interrupted') return;
+            advance();
+          };
 
           window.speechSynthesis.speak(utterance);
 
           // Safety timeout fallback: if speech synthesis is blocked or silent, advance naturally
           const estimatedDuration = Math.max(2500, textToSpeak.length * 75);
-          setTimeout(() => {
+          const safetyTimerId = setTimeout(() => {
+            if (!isPlayingRef.current) return;
             if (!spoken) advance();
           }, estimatedDuration);
+          voiceTimersRef.current.push(safetyTimerId);
         } catch (e) {
           // Direct fallback for environments without SpeechSynthesis support
           const fallbackDuration = Math.max(2000, textToSpeak.length * 70);
-          setTimeout(() => {
+          const fallbackTimerId = setTimeout(() => {
+            if (!isPlayingRef.current) return;
             index++;
             playNextTurn();
           }, fallbackDuration);
+          voiceTimersRef.current.push(fallbackTimerId);
         }
       } else {
         const fallbackDuration = Math.max(2000, textToSpeak.length * 70);
-        setTimeout(() => {
+        const fallbackTimerId = setTimeout(() => {
+          if (!isPlayingRef.current) return;
           index++;
           playNextTurn();
         }, fallbackDuration);
+        voiceTimersRef.current.push(fallbackTimerId);
       }
     };
 
     playNextTurn();
   };
-
-  useEffect(() => {
-    return () => {
-      if (window.speechSynthesis) window.speechSynthesis.cancel();
-    };
-  }, []);
 
 
   const handleSavePTP = async () => {
@@ -320,7 +376,7 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
 
   return (
     <>
-      <div className="drawer-overlay" onClick={() => { window.speechSynthesis?.cancel(); onClose(); }} />
+      <div className="drawer-overlay" onClick={() => { stopVoicePlayback(); onClose(); }} />
       <div className="drawer-panel flex flex-col h-full max-w-2xl bg-white shadow-2xl border-l border-slate-200">
 
         {/* Drawer Header */}
@@ -376,7 +432,7 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
             </kbd>
             <button
               id="close-audit-drawer"
-              onClick={() => { window.speechSynthesis?.cancel(); onClose(); }}
+              onClick={() => { stopVoicePlayback(); onClose(); }}
               className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
             >
               <IconX className="w-4 h-4" />
@@ -445,7 +501,10 @@ const AuditTrailDrawer = ({ transaction, onClose }) => {
             return (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => {
+                  if (tab.id !== 'voice') stopVoicePlayback();
+                  setActiveTab(tab.id);
+                }}
                 className={`flex items-center gap-2 py-3 text-xs font-semibold border-b-2 transition-all whitespace-nowrap ${isActive
                     ? 'border-indigo-600 text-indigo-700'
                     : 'border-transparent text-slate-500 hover:text-slate-800'
