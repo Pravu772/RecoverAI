@@ -9,23 +9,23 @@ import {
 import { useCurrency } from '../context/CurrencyContext.jsx';
 
 const STATUS_META = {
-  failed:              { label: 'Failed',            cls: 'bg-rose-50 text-rose-700 border-rose-200' },
-  classifying:         { label: 'Classifying',       cls: 'bg-purple-50 text-purple-700 border-purple-200' },
-  action_taken:        { label: 'Action Dispatched',  cls: 'bg-blue-50 text-blue-700 border-blue-200' },
-  recovered:           { label: 'Recovered',         cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  exception:           { label: 'Exception Flagged',  cls: 'bg-amber-50 text-amber-700 border-amber-200' },
-  max_retries_reached: { label: 'Max Attempts Stop',  cls: 'bg-rose-50 text-rose-800 border-rose-200' },
-  pending_human:       { label: 'Manual Review',     cls: 'bg-orange-50 text-orange-700 border-orange-200' },
-  opted_out:           { label: 'Opted Out',         cls: 'bg-slate-100 text-slate-600 border-slate-200' },
-  ptp_committed:       { label: 'PTP Committed',      cls: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-  ptp_broken:          { label: 'PTP Broken',         cls: 'bg-rose-100 text-rose-800 border-rose-300' },
+  failed: { label: 'Failed', cls: 'bg-rose-50 text-rose-700 border-rose-200' },
+  classifying: { label: 'Classifying', cls: 'bg-purple-50 text-purple-700 border-purple-200' },
+  action_taken: { label: 'Action Dispatched', cls: 'bg-blue-50 text-blue-700 border-blue-200' },
+  recovered: { label: 'Recovered', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+  exception: { label: 'Exception Flagged', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+  max_retries_reached: { label: 'Max Attempts Stop', cls: 'bg-rose-50 text-rose-800 border-rose-200' },
+  pending_human: { label: 'Manual Review', cls: 'bg-orange-50 text-orange-700 border-orange-200' },
+  opted_out: { label: 'Opted Out', cls: 'bg-slate-100 text-slate-600 border-slate-200' },
+  ptp_committed: { label: 'PTP Committed', cls: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+  ptp_broken: { label: 'PTP Broken', cls: 'bg-rose-100 text-rose-800 border-rose-300' },
 };
 
 const STREAM_META = {
-  payment_gateway:      { label: 'Gateway Failure',     Icon: IconZap,          color: 'text-blue-700',   bg: 'bg-blue-50',   border: 'border-blue-200' },
-  checkout_abandonment: { label: 'Cart Abandonment',    Icon: IconShoppingCart, color: 'text-orange-700', bg: 'bg-orange-50', border: 'border-orange-200' },
-  subscription_renewal: { label: 'Recurring Mandate',   Icon: IconRepeat,        color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200' },
-  b2b_invoice:          { label: 'B2B Receivable',      Icon: IconFileText,      color: 'text-teal-700',   bg: 'bg-teal-50',   border: 'border-teal-200' },
+  payment_gateway: { label: 'Gateway Failure', Icon: IconZap, color: 'text-blue-700', bg: 'bg-blue-50', border: 'border-blue-200' },
+  checkout_abandonment: { label: 'Cart Abandonment', Icon: IconShoppingCart, color: 'text-orange-700', bg: 'bg-orange-50', border: 'border-orange-200' },
+  subscription_renewal: { label: 'Recurring Mandate', Icon: IconRepeat, color: 'text-purple-700', bg: 'bg-purple-50', border: 'border-purple-200' },
+  b2b_invoice: { label: 'B2B Receivable', Icon: IconFileText, color: 'text-teal-700', bg: 'bg-teal-50', border: 'border-teal-200' },
 };
 
 const MERCHANT_LOGOS = {
@@ -42,17 +42,17 @@ const MERCHANT_LOGOS = {
 };
 
 const REASON_COLORS = {
-  insufficient_funds:          '#d97706',
-  card_expired:                '#dc2626',
-  bank_timeout:                '#7c3aed',
-  mandate_expired:             '#059669',
-  network_error:               '#0891b2',
-  checkout_hesitation:         '#ea580c',
-  otp_dropoff:                 '#e11d48',
-  invoice_overdue_30d:         '#0d9488',
-  invoice_overdue_60d:         '#b91c1c',
+  insufficient_funds: '#d97706',
+  card_expired: '#dc2626',
+  bank_timeout: '#7c3aed',
+  mandate_expired: '#059669',
+  network_error: '#0891b2',
+  checkout_hesitation: '#ea580c',
+  otp_dropoff: '#e11d48',
+  invoice_overdue_30d: '#0d9488',
+  invoice_overdue_60d: '#b91c1c',
   subscription_failed_billing: '#6d28d9',
-  unknown:                     '#64748b',
+  unknown: '#64748b',
 };
 
 const ConfidencePopover = ({ score, txn }) => {
@@ -108,12 +108,12 @@ const SortIcon = ({ field, active, dir }) => {
 const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream }) => {
   const { formatMoney } = useCurrency();
   const [sortField, setSortField] = useState('created_at');
-  const [sortDir,   setSortDir]   = useState('desc');
-  const [fStatus,   setFStatus]   = useState('');
-  const [fReason,   setFReason]   = useState('');
-  const [search,    setSearch]    = useState('');
-  const [copiedId,  setCopiedId]  = useState(null);
-  const [density,   setDensity]   = useState('comfortable'); // 'comfortable' | 'dense'
+  const [sortDir, setSortDir] = useState('desc');
+  const [fStatus, setFStatus] = useState('');
+  const [fReason, setFReason] = useState('');
+  const [search, setSearch] = useState('');
+  const [copiedId, setCopiedId] = useState(null);
+  const [density, setDensity] = useState('comfortable'); // 'comfortable' | 'dense'
   const [selectedIds, setSelectedIds] = useState([]);
   const [focusedIndex, setFocusedIndex] = useState(0);
 
@@ -156,7 +156,7 @@ const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream 
         if (typeof av === 'string') av = av.toLowerCase();
         if (typeof bv === 'string') bv = bv.toLowerCase();
         if (av < bv) return sortDir === 'asc' ? -1 : 1;
-        if (av > bv) return sortDir === 'asc' ?  1 : -1;
+        if (av > bv) return sortDir === 'asc' ? 1 : -1;
         return 0;
       });
   }, [transactions, selectedStream, fStatus, fReason, search, sortField, sortDir]);
@@ -297,7 +297,7 @@ const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream 
 
   return (
     <div className="relative card overflow-hidden bg-white border border-slate-200 shadow-xs">
-      
+
       {/* Table Toolbar */}
       <div className="px-4 py-3 flex flex-wrap gap-2.5 items-center bg-slate-50/70 border-b border-slate-200">
         <div className="relative flex-1 min-w-[200px] max-w-xs">
@@ -476,16 +476,15 @@ const TransactionTable = ({ transactions, onRowClick, isLoading, selectedStream 
                 <tr
                   key={txn.transaction_id || txn._id}
                   onClick={() => { setFocusedIndex(idx); onRowClick(txn); }}
-                  className={`hover:bg-indigo-50/20 hover:border-l-4 hover:border-l-indigo-600 transition-all cursor-pointer group ${
-                    isFocused ? 'table-row-focus bg-slate-50/90' : ''
-                  } ${isSelected ? 'bg-indigo-50/40' : ''} ${density === 'dense' ? '!py-1.5' : ''}`}
+                  className={`hover:bg-indigo-50/20 hover:border-l-4 hover:border-l-indigo-600 transition-all cursor-pointer group ${isFocused ? 'table-row-focus bg-slate-50/90' : ''
+                    } ${isSelected ? 'bg-indigo-50/40' : ''} ${density === 'dense' ? '!py-1.5' : ''}`}
                 >
                   {/* Select Checkbox */}
                   <td onClick={e => handleToggleRowSelect(e, txn.transaction_id)}>
                     <input
                       type="checkbox"
                       checked={isSelected}
-                      onChange={() => {}}
+                      onChange={() => { }}
                       className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                     />
                   </td>

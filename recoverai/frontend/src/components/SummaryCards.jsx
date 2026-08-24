@@ -53,13 +53,12 @@ const MetricCard = ({ label, value, sub, Icon, accentColor, isCurrency, isPercen
 
   const display = isLoading ? null
     : isCurrency ? formatMoney(counted)
-    : isPercent  ? `${value.toFixed(1)}%`
-    : counted.toLocaleString('en-IN');
+      : isPercent ? `${value.toFixed(1)}%`
+        : counted.toLocaleString('en-IN');
 
   return (
-    <div className={`p-4 rounded-2xl bg-white border shadow-2xs hover:shadow-md hover:-translate-y-0.5 transition-all flex flex-col justify-between gap-3 group ${
-      alertMode ? 'border-amber-300 bg-amber-50/20' : 'border-slate-200/90 hover:border-slate-300'
-    }`}>
+    <div className={`p-4 rounded-2xl bg-white border shadow-2xs hover:shadow-md hover:-translate-y-0.5 transition-all flex flex-col justify-between gap-3 group ${alertMode ? 'border-amber-300 bg-amber-50/20' : 'border-slate-200/90 hover:border-slate-300'
+      }`}>
       {/* Top Row: Label on Left, Icon on Right */}
       <div className="flex items-center justify-between gap-2">
         <p className={`text-2xs font-bold uppercase tracking-wider truncate ${alertMode ? 'text-amber-800' : 'text-slate-500'}`}>
@@ -86,7 +85,7 @@ const MetricCard = ({ label, value, sub, Icon, accentColor, isCurrency, isPercen
           </p>
         )}
       </div>
-      
+
       {/* Bottom Row: Subtitle & Sparkline */}
       <div className="flex items-center justify-between pt-2 border-t border-slate-100/80 gap-2">
         {sub && !isLoading ? (

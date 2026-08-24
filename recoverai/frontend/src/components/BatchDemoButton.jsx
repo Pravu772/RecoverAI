@@ -4,18 +4,18 @@ import { IconDatabase, IconBrain, IconZap, IconFastForward, IconPlay, IconArrowR
 import LoadingInline from './LoadingInline.jsx';
 
 const STEPS = [
-  { id: 'generate', label: 'Generate',  sub: '50 synthetic transactions', Icon: IconDatabase },
-  { id: 'classify', label: 'Classify',  sub: 'AI + rule-based',           Icon: IconBrain },
-  { id: 'recover',  label: 'Recover',   sub: 'Execute actions',           Icon: IconZap },
+  { id: 'generate', label: 'Generate', sub: '50 synthetic transactions', Icon: IconDatabase },
+  { id: 'classify', label: 'Classify', sub: 'AI + rule-based', Icon: IconBrain },
+  { id: 'recover', label: 'Recover', sub: 'Execute actions', Icon: IconZap },
 ];
 
 const StepDot = ({ step, status }) => {
   const { Icon } = step;
   const styles = {
-    idle:   { border: 'var(--color-border)', color: 'var(--color-text-muted)', bg: 'var(--color-bg)' },
-    active: { border: 'var(--color-accent)',  color: 'var(--color-accent)',  bg: '#eff6ff' },
-    done:   { border: '#059669',             color: '#059669',              bg: '#ecfdf5' },
-    error:  { border: '#dc2626',             color: '#dc2626',              bg: '#fef2f2' },
+    idle: { border: 'var(--color-border)', color: 'var(--color-text-muted)', bg: 'var(--color-bg)' },
+    active: { border: 'var(--color-accent)', color: 'var(--color-accent)', bg: '#eff6ff' },
+    done: { border: '#059669', color: '#059669', bg: '#ecfdf5' },
+    error: { border: '#dc2626', color: '#dc2626', bg: '#fef2f2' },
   };
   const s = styles[status] || styles.idle;
 
@@ -54,11 +54,11 @@ const StepDot = ({ step, status }) => {
 };
 
 const BatchDemoButton = ({ onComplete, onOpenReport, count = 50, isInitialEmpty = false }) => {
-  const [running,      setRunning]      = useState(false);
-  const [statuses,     setStatuses]     = useState({ generate: 'idle', classify: 'idle', recover: 'idle' });
-  const [message,      setMessage]      = useState('');
-  const [error,        setError]        = useState(null);
-  const [result,       setResult]       = useState(null);
+  const [running, setRunning] = useState(false);
+  const [statuses, setStatuses] = useState({ generate: 'idle', classify: 'idle', recover: 'idle' });
+  const [message, setMessage] = useState('');
+  const [error, setError] = useState(null);
+  const [result, setResult] = useState(null);
   const [advancingTime, setAdvancingTime] = useState(false);
 
   const set = (id, status) => setStatuses(p => ({ ...p, [id]: status }));
@@ -123,11 +123,10 @@ const BatchDemoButton = ({ onComplete, onOpenReport, count = 50, isInitialEmpty 
   const allDone = Object.values(statuses).every(s => s === 'done');
 
   return (
-    <div className={`card p-5 flex flex-col justify-between gap-4 bg-white border transition-all ${
-      isInitialEmpty
-        ? 'ring-2 ring-indigo-500/60 shadow-lg shadow-indigo-500/10 border-indigo-300'
-        : 'border-slate-200 shadow-xs'
-    }`}>
+    <div className={`card p-5 flex flex-col justify-between gap-4 bg-white border transition-all ${isInitialEmpty
+      ? 'ring-2 ring-indigo-500/60 shadow-lg shadow-indigo-500/10 border-indigo-300'
+      : 'border-slate-200 shadow-xs'
+      }`}>
       {/* Onboarding Starter Banner */}
       {isInitialEmpty && (
         <div className="p-2.5 rounded-xl bg-indigo-50/80 border border-indigo-200 text-indigo-950 text-xs flex items-center gap-2">
@@ -220,7 +219,7 @@ const BatchDemoButton = ({ onComplete, onOpenReport, count = 50, isInitialEmpty 
             {[
               { label: 'Processed', value: result.total_processed },
               { label: 'Recovered', value: result.recovered_count, accent: true },
-              { label: 'Rate',      value: `${result.recovery_rate}%` },
+              { label: 'Rate', value: `${result.recovery_rate}%` },
             ].map(stat => (
               <div key={stat.label}>
                 <p className="text-2xs text-emerald-700 font-medium">{stat.label}</p>
@@ -239,11 +238,10 @@ const BatchDemoButton = ({ onComplete, onOpenReport, count = 50, isInitialEmpty 
           id="btn-run-demo"
           onClick={runDemo}
           disabled={running}
-          className={`flex-1 justify-center text-xs py-2.5 px-4 rounded-xl font-bold transition-all shadow-xs flex items-center gap-2 cursor-pointer ${
-            running
-              ? 'shimmer-wave text-white'
-              : 'bg-indigo-600 hover:bg-indigo-700 active:translate-y-0.5 text-white'
-          }`}
+          className={`flex-1 justify-center text-xs py-2.5 px-4 rounded-xl font-bold transition-all shadow-xs flex items-center gap-2 cursor-pointer ${running
+            ? 'shimmer-wave text-white'
+            : 'bg-indigo-600 hover:bg-indigo-700 active:translate-y-0.5 text-white'
+            }`}
         >
           {running ? (
             <><div className="spinner text-white" /><span>Executing AI Recovery Pipeline…</span></>

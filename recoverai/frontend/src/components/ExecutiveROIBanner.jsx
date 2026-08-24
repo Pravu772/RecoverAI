@@ -5,14 +5,14 @@ const ExecutiveROIBanner = ({ summary, onOpenCFO, onOpenPolicy }) => {
   const { formatMoney } = useCurrency();
   const s = summary || {};
   const recoveredAmount = s.total_recovered_amount || 0;
-  
+
   // Realistic enterprise unit economics calculation (Voice AI telephony + SMS/WhatsApp + compute)
   const totalTxns = s.total_transactions || 0;
-  const estimatedCost = totalTxns > 0 
+  const estimatedCost = totalTxns > 0
     ? Math.max(120, Math.round(totalTxns * 14.5 + (recoveredAmount * 0.012)))
     : 0;
   const netSavings = Math.max(0, recoveredAmount - estimatedCost);
-  
+
   let roiMultiplier = '0.0';
   if (estimatedCost > 0 && recoveredAmount > 0) {
     const rawVal = recoveredAmount / estimatedCost;
@@ -22,7 +22,7 @@ const ExecutiveROIBanner = ({ summary, onOpenCFO, onOpenPolicy }) => {
   return (
     <div className="mb-6 p-5 rounded-2xl bg-gradient-to-r from-emerald-50/50 via-white to-white border border-emerald-200/80 border-l-4 border-l-emerald-500 shadow-xs transition-all">
       <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
-        
+
         {/* Left Headline: ROI Multiplier Spotlight */}
         <div className="flex items-center gap-4 min-w-0">
           <div className="min-w-[4.5rem] px-3 py-2 h-14 rounded-2xl bg-emerald-600 text-white flex flex-col items-center justify-center flex-shrink-0 shadow-sm shadow-emerald-600/20">

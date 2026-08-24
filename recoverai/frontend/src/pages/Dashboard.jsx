@@ -422,12 +422,17 @@ const Dashboard = ({ onFirstLoad }) => {
               <span className="font-semibold text-slate-700">RecoverAI Platform</span>
               <span>— Autonomous Revenue Recovery & Bounded Intervention Architecture</span>
             </div>
-            <div className="flex items-center gap-3 text-2xs text-slate-400 font-mono">
-              <span>Deterministic Routing</span>
-              <span>•</span>
-              <span>Gemini Reasoning</span>
-              <span>•</span>
-              <span>Immutable Audit Provenance</span>
+            <div className="flex flex-wrap items-center gap-2 text-2xs text-slate-400 font-mono">
+              <span className="text-slate-500">// debugged at 3AM so your revenue doesn't leak at 3PM</span>
+              <a
+                href="https://pravindev.tech/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-indigo-600 hover:text-indigo-800 font-bold hover:underline transition-colors cursor-pointer"
+                title="Explore my Portfolio"
+              >
+                &lt;/Pravin-M&gt;
+              </a>
             </div>
           </footer>
         </main>
