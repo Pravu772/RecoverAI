@@ -48,21 +48,20 @@ const LoadingScreen = ({ isLoading, onDone }) => {
     return () => clearTimeout(t);
   }, []);
 
-  // When isLoading goes false → trigger exit sequence
+  // When isLoading goes false → let the reveal animation finish before exit
   useEffect(() => {
     if (!isLoading && phase === 'enter') {
-      // Data came back before animation finished — wait for reveal to complete
+      // Allow the branded reveal animation to complete nicely before exiting
       const t = setTimeout(() => {
         setPhase('exit');
-      }, 1200); // let reveal at least mostly complete
+      }, 1400);
       return () => clearTimeout(t);
     }
 
     if (!isLoading && phase === 'loop') {
       setPhase('exit');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isLoading]);
+  }, [isLoading, phase]);
 
   // After reveal animation completes (~1.5s), move to 'loop' if still loading
   useEffect(() => {

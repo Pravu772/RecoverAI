@@ -2,8 +2,8 @@ require('dotenv').config();
 require('express-async-errors');
 
 const express = require('express');
-const cors    = require('cors');
-const helmet  = require('helmet');                  // FIX #5 — HTTP security headers
+const cors = require('cors');
+const helmet = require('helmet');                  // FIX #5 — HTTP security headers
 const rateLimit = require('express-rate-limit');
 const connectDB = require('./src/config/db');
 const { sanitizeDatabase } = require('./src/utils/sanitizeDatabase');
@@ -19,20 +19,20 @@ for (const key of REQUIRED_ENV) {
 
 // ── Route imports ─────────────────────────────────────────────────────────────
 const transactionRoutes = require('./src/routes/transactions');
-const recoveryRoutes    = require('./src/routes/recovery');
-const auditRoutes       = require('./src/routes/audit');
-const dashboardRoutes   = require('./src/routes/dashboard');
-const simulateRoutes    = require('./src/routes/simulate');
-const webhookRoutes     = require('./src/routes/webhooks');
-const streamRoutes      = require('./src/routes/stream');
-const chaosRoutes       = require('./src/routes/chaos');
-const apiKeyRoutes      = require('./src/routes/apiKeys');
+const recoveryRoutes = require('./src/routes/recovery');
+const auditRoutes = require('./src/routes/audit');
+const dashboardRoutes = require('./src/routes/dashboard');
+const simulateRoutes = require('./src/routes/simulate');
+const webhookRoutes = require('./src/routes/webhooks');
+const streamRoutes = require('./src/routes/stream');
+const chaosRoutes = require('./src/routes/chaos');
+const apiKeyRoutes = require('./src/routes/apiKeys');
 
 // ── Enterprise Middlewares ────────────────────────────────────────────────────
 const { correlation } = require('./src/middleware/correlation');
-const { idempotency  } = require('./src/middleware/idempotency');
+const { idempotency } = require('./src/middleware/idempotency');
 
-const app  = express();
+const app = express();
 const PORT = process.env.PORT || 5000;
 
 const Transaction = require('./src/models/Transaction');

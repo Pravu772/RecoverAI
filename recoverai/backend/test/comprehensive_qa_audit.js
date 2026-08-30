@@ -519,7 +519,7 @@ async function runQAAudit() {
 
     const isOpen = geminiCircuitBreaker.state === 'OPEN';
     const startTime = process.hrtime.bigint();
-    
+
     // Execute fallback while OPEN
     const fallbackResult = await classifyTransaction(new Transaction({
       transaction_id: `TXN_CB_${Date.now()}`,
